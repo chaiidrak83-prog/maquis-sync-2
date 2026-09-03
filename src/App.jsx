@@ -1,4 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { 
+  productService, 
+  salesService, 
+  staffService, 
+  attendanceService, 
+  establishmentService 
+} from './services/api';
 import { 
   Wifi, 
   WifiOff, 
@@ -37,7 +45,10 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // --- Simulation Global States ---
+  // --- Simulation & Database Global States ---
+  const [establishmentId, setEstablishmentId] = useState('a0000000-0000-0000-0000-000000000001');
+  const [supabaseActive, setSupabaseActive] = useState(isSupabaseConfigured());
+  const [isDbLoading, setIsDbLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState('DECOUVERTE'); // 'DECOUVERTE' | 'ACCES' | 'PREMIUM'
@@ -158,6 +169,110 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [isOnline, offlineSyncQueue]);
+
+  // --- Supabase Data Loading & Realtime Subscription ---
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    setIsDbLoading(true);
+    Promise.all([
+      establishmentService.getFirst(),
+      productService.getAll(establishmentId),
+      staffService.getAll(establishmentId),
+      salesService.getAll(establishmentId),
+      attendanceService.getAll(establishmentId)
+    ])
+      .then(([est, dbProducts, dbUsers, dbSales, dbAttendances]) => {
+        if (est) {
+          if (est.id) setEstablishmentId(est.id);
+          if (est.subscription_tier) setSubscriptionTier(est.subscription_tier);
+          if (est.ussd_template) setUssdTemplate(est.ussd_template);
+        }
+        if (dbProducts && dbProducts.length > 0) {
+          setProducts(dbProducts.map(p => ({
+            ...p,
+            image_base64: p.image_base64 || drinkImages.beer_gold
+          })));
+        }
+        if (dbUsers && dbUsers.length > 0) {
+          setUsers(dbUsers.map(u => ({
+            ...u,
+            pin: u.pin_hash
+          })));
+        }
+        if (dbSales && dbSales.length > 0) {
+          setSales(dbSales.map(s => ({
+            id: s.id,
+            user_id: s.user_id,
+            waitress_name: s.users?.name || 'Serveuse',
+            total_amount: Number(s.total_amount),
+            payment_method: s.payment_method,
+            created_at: new Date(s.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            is_synced: s.is_synced
+          })));
+        }
+        if (dbAttendances && dbAttendances.length > 0) {
+          setAttendances(dbAttendances.map(a => ({
+            id: a.id,
+            waitress_name: a.users?.name || 'Serveuse',
+            check_in: new Date(a.check_in).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            check_out: a.check_out ? new Date(a.check_out).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null,
+            method: a.check_in_method
+          })));
+        }
+        setSupabaseActive(true);
+      })
+      .catch(err => {
+        console.warn('Erreur chargement Supabase:', err);
+      })
+      .finally(() => {
+        setIsDbLoading(false);
+      });
+
+    // Realtime channel
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => {
+        salesService.getAll(establishmentId).then(data => {
+          if (data) {
+            setSales(data.map(s => ({
+              id: s.id,
+              user_id: s.user_id,
+              waitress_name: s.users?.name || 'Serveuse',
+              total_amount: Number(s.total_amount),
+              payment_method: s.payment_method,
+              created_at: new Date(s.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+              is_synced: s.is_synced
+            })));
+          }
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        productService.getAll(establishmentId).then(data => {
+          if (data) {
+            setProducts(data.map(p => ({
+              ...p,
+              image_base64: p.image_base64 || drinkImages.beer_gold
+            })));
+          }
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        staffService.getAll(establishmentId).then(data => {
+          if (data) {
+            setUsers(data.map(u => ({
+              ...u,
+              pin: u.pin_hash
+            })));
+          }
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [establishmentId]);
 
   // Find currently logged user in simulator
   const currentUser = useMemo(() => {
@@ -321,7 +436,24 @@ export default function App() {
     }));
 
     if (isOnline) {
-      setSales(prev => [...prev, newSale]);
+      setSales(prev => [newSale, ...prev]);
+      if (isSupabaseConfigured()) {
+        const saleItems = Object.entries(cart).map(([productId, quantity]) => {
+          const product = products.find(p => p.id === productId);
+          return {
+            productId,
+            quantity,
+            unitPrice: product ? product.price : 0
+          };
+        });
+        salesService.createSale({
+          establishmentId,
+          userId: currentUser?.id && currentUser.id.length > 20 ? currentUser.id : null,
+          totalAmount: cartTotal,
+          paymentMethod: method,
+          items: saleItems
+        }).catch(err => console.warn('Erreur sauvegarde vente Supabase:', err));
+      }
     } else {
       setOfflineSyncQueue(prev => [...prev, newSale]);
     }
@@ -405,10 +537,16 @@ export default function App() {
       return;
     }
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'VALIDATED' } : u));
+    if (isSupabaseConfigured() && id.length > 20) {
+      staffService.updateStatus(id, 'VALIDATED').catch(err => console.warn('Erreur validation Supabase:', err));
+    }
   };
 
   const handleRejectWaitress = (id) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'REJECTED' } : u));
+    if (isSupabaseConfigured() && id.length > 20) {
+      staffService.updateStatus(id, 'REJECTED').catch(err => console.warn('Erreur rejet Supabase:', err));
+    }
   };
 
   const handleToggleWaitressActive = (id) => {
@@ -421,7 +559,11 @@ export default function App() {
       return;
     }
 
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: !u.is_active } : u));
+    const nextActive = !userToToggle.is_active;
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: nextActive } : u));
+    if (isSupabaseConfigured() && id.length > 20) {
+      staffService.toggleActive(id, nextActive).catch(err => console.warn('Erreur activation Supabase:', err));
+    }
   };
 
   // Stock Adjustment Manual
@@ -429,15 +571,22 @@ export default function App() {
     e.preventDefault();
     if (!adjustQty) return;
     const qty = parseInt(adjustQty);
+    let updatedStock = 0;
     setProducts(prev => prev.map(p => {
       if (p.id === adjustingProductId) {
+        updatedStock = Math.max(0, p.current_stock + qty);
         return {
           ...p,
-          current_stock: Math.max(0, p.current_stock + qty)
+          current_stock: updatedStock
         };
       }
       return p;
     }));
+
+    if (isSupabaseConfigured() && adjustingProductId && adjustingProductId.length > 20) {
+      productService.updateStock(adjustingProductId, updatedStock).catch(err => console.warn('Erreur stock Supabase:', err));
+    }
+
     setAdjustingProductId(null);
     setAdjustQty('');
   };
@@ -460,6 +609,22 @@ export default function App() {
     setNewProductName('');
     setNewProductPrice('');
     setNewProductStock('');
+
+    if (isSupabaseConfigured()) {
+      supabase.from('products').insert({
+        establishment_id: establishmentId,
+        name: newP.name,
+        volume: newP.volume,
+        price: newP.price,
+        initial_stock: newP.initial_stock,
+        current_stock: newP.current_stock,
+        is_active: true
+      }).select().single().then(({ data }) => {
+        if (data) {
+          setProducts(prev => prev.map(p => p.id === newP.id ? { ...p, id: data.id } : p));
+        }
+      }).catch(err => console.warn('Erreur ajout produit Supabase:', err));
+    }
   };
 
   // Owner Financial Stats with Filter: Jour / Semaine / Mois
@@ -507,6 +672,26 @@ export default function App() {
           </nav>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Supabase Live Status Badge */}
+            <div 
+              style={{ 
+                padding: '6px 12px', 
+                fontSize: '12px', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                background: supabaseActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                border: `1px solid ${supabaseActive ? '#10b981' : '#f59e0b'}`,
+                color: supabaseActive ? '#10b981' : '#b45309',
+                fontWeight: 600
+              }}
+              title={supabaseActive ? "Connecté au projet Supabase en ligne : maquis sync" : "Mode démo local"}
+            >
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: supabaseActive ? '#10b981' : '#f59e0b', display: 'inline-block' }}></span>
+              {isDbLoading ? 'Chargement DB...' : supabaseActive ? 'Supabase Connecté' : 'Mode Démo'}
+            </div>
+
             {/* Internet Status Toggle */}
             <button 
               onClick={() => setIsOnline(!isOnline)} 
