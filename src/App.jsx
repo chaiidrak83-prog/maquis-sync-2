@@ -46,6 +46,7 @@ import {
 
 export default function App() {
   // --- Simulation & Database Global States ---
+  const [viewMode, setViewMode] = useState('LANDING'); // 'LANDING' | 'MOBILE_POS'
   const [establishmentId, setEstablishmentId] = useState('a0000000-0000-0000-0000-000000000001');
   const [supabaseActive, setSupabaseActive] = useState(isSupabaseConfigured());
   const [isDbLoading, setIsDbLoading] = useState(false);
@@ -718,13 +719,46 @@ export default function App() {
                 </>
               )}
             </button>
-            <a href="#demo" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '13px' }}>Essai 7 Jours Gratuit</a>
+            {/* Direct Switch to Mobile POS Simulator */}
+            <button 
+              onClick={() => {
+                if (viewMode === 'MOBILE_POS') {
+                  setViewMode('LANDING');
+                } else {
+                  setViewMode('MOBILE_POS');
+                  if (!loggedInUserId) {
+                    setLoggedInUserId('b0000000-0000-0000-0000-000000000003');
+                    setWaitressTab('commande');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="btn btn-primary"
+              style={{
+                padding: '9px 18px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: viewMode === 'MOBILE_POS' ? '#f59e0b' : 'linear-gradient(135deg, #10b981, #059669)',
+                borderColor: viewMode === 'MOBILE_POS' ? '#f59e0b' : '#10b981',
+                color: '#ffffff',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+              }}
+            >
+              <Smartphone size={16} />
+              {viewMode === 'MOBILE_POS' ? '🖥️ Voir le SaaS Web' : '📱 Tester l’App Mobile Caisse'}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* 2. HERO SECTION */}
-      <section className="hero-section">
+      {/* 2. HERO SECTION & MARKETING (HIDDEN IN MOBILE_POS MODE) */}
+      {viewMode !== 'MOBILE_POS' && (
+        <>
+          <section className="hero-section">
         <div className="container">
           <div className="badge">
             <TrendingUp size={14} style={{ marginRight: '4px' }} /> Zéro Perte, Contrôle Absolu
@@ -845,16 +879,32 @@ export default function App() {
           </div>
         </div>
       </section>
+    </>
+  )}
 
       {/* 4. DYNAMIC INTERACTIVE DEMO (UNIFIED MOBILE APP SIMULATOR) */}
-      <section id="demo" className="demo-section">
+      <section id="demo" className="demo-section" style={viewMode === 'MOBILE_POS' ? { paddingTop: '24px' } : {}}>
         <div className="container">
-          <div className="section-header">
-            <h2 className="section-title">Application Mobile <span>Tout-en-Un</span></h2>
-            <p className="section-subtitle">
-              Saisissez un numéro de téléphone ci-dessous pour être redirigé vers l'interface Propriétaire, Gérant ou Serveuse.
-            </p>
-          </div>
+          {viewMode === 'MOBILE_POS' ? (
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', fontWeight: 700, fontSize: '13px', marginBottom: '12px' }}>
+                <Smartphone size={15} /> Interface Mobile Serveuse (POS) en direct
+              </div>
+              <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#f8fafc', margin: '0 0 8px 0' }}>
+                Testez la prise de commande et l'encaissement
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '14px', maxWidth: '650px', margin: '0 auto' }}>
+                Ajoutez des boissons au panier dans le téléphone ci-dessous, encaissez en Espèces ou Mobile Money, et observez la mise à jour en temps réel sur Supabase.
+              </p>
+            </div>
+          ) : (
+            <div className="section-header">
+              <h2 className="section-title">Application Mobile <span>Tout-en-Un</span></h2>
+              <p className="section-subtitle">
+                Saisissez un numéro de téléphone ci-dessous pour être redirigé vers l'interface Propriétaire, Gérant ou Serveuse.
+              </p>
+            </div>
+          )}
 
           <div className="demo-grid">
             {/* Left: Test credentials and simulation helper */}
@@ -2021,8 +2071,10 @@ export default function App() {
         </div>
       </section>
 
-      {/* 5. TARIFS SECTION (7 DAYS FREE TRIAL, NO SAAS WORD) */}
-      <section id="tarifs" className="pricing-section">
+      {/* 5. TARIFS SECTION & FOOTER (HIDDEN IN MOBILE_POS MODE) */}
+      {viewMode !== 'MOBILE_POS' && (
+        <>
+          <section id="tarifs" className="pricing-section">
         <div className="container">
           <div className="section-header">
             <h2 className="section-title">Des abonnements adaptés à la <span>taille de votre maquis</span></h2>
@@ -2133,6 +2185,8 @@ export default function App() {
           </p>
         </div>
       </footer>
+    </>
+  )}
     </div>
   );
 }

@@ -176,6 +176,28 @@ export default function ShiftScreen() {
           </View>
         </View>
 
+        {/* CARTE GESTION ABONNEMENT SAAS */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Gestion des Abonnements SaaS</Text>
+          <Text style={styles.cardSubtitle}>
+            Formules Découverte (9 900 F), Accès (14 900 F) et Premium (19 900 F)
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 11, borderRadius: 12, alignItems: 'center' }}
+              onPress={() => router.push('/subscription/plans' as any)}
+            >
+              <Text style={{ color: '#090d16', fontWeight: '900', fontSize: 12 }}>🎁 Choisir / Renouveler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: '#1e293b', borderWidth: 1, borderColor: '#334155', paddingVertical: 11, borderRadius: 12, alignItems: 'center' }}
+              onPress={() => router.push('/admin/subscriptions' as any)}
+            >
+              <Text style={{ color: '#f59e0b', fontWeight: '800', fontSize: 12 }}>👑 Validation Admin</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* STATISTIQUES DU SHIFT */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>

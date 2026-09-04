@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export interface Product {
@@ -39,6 +40,31 @@ export interface Sale {
   items: CartItem[];
 }
 
+const isServer = typeof window === 'undefined' && Platform.OS === 'web';
+
+const safeStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    if (isServer) return null;
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    if (isServer) return;
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch {}
+  },
+  removeItem: async (key: string): Promise<void> => {
+    if (isServer) return;
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch {}
+  },
+};
+
 const STORAGE_KEYS = {
   CURRENT_USER: '@maquis_current_waitress',
   CACHED_PRODUCTS: '@maquis_cached_products',
@@ -68,7 +94,7 @@ export const posService = {
           role: 'WAITRESS',
           status: 'VALIDATED',
         };
-        await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(demoUser));
+        await safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(demoUser));
         return demoUser;
       }
       throw new Error('Téléphone ou code PIN incorrect');
@@ -100,11 +126,11 @@ export const posService = {
         status: data.status,
       };
 
-      await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      await safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
       return user;
     } catch (err: any) {
       // Si réseau indisponible, vérifier le cache de la dernière serveuse connectée
-      const cached = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      const cached = await safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);
       if (cached) {
         const cachedUser: User = JSON.parse(cached);
         if (cachedUser.phone === phone) {
@@ -116,12 +142,12 @@ export const posService = {
   },
 
   async getStoredUser(): Promise<User | null> {
-    const raw = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    const raw = await safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     return raw ? JSON.parse(raw) : null;
   },
 
   async logout(): Promise<void> {
-    await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    await safeStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   },
 
   // --- CATALOGUE DE BOISSONS & CACHE HORS-LIGNE ---
@@ -142,7 +168,7 @@ export const posService = {
             price: Number(p.price),
             current_stock: p.current_stock,
           }));
-          await AsyncStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(mapped));
+          await safeStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(mapped));
           return mapped;
         }
       } catch (e) {
@@ -150,8 +176,8 @@ export const posService = {
       }
     }
 
-    // Récupération depuis le cache local AsyncStorage
-    const cached = await AsyncStorage.getItem(STORAGE_KEYS.CACHED_PRODUCTS);
+    // Récupération depuis le cache local safeStorage
+    const cached = await safeStorage.getItem(STORAGE_KEYS.CACHED_PRODUCTS);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -162,13 +188,13 @@ export const posService = {
   // --- PRISE DE COMMANDE & GESTION HORS-LIGNE ---
   async recordSale(sale: Sale, isOnline: boolean): Promise<{ success: boolean; synced: boolean }> {
     // 1. Sauvegarder dans l'historique du shift local
-    const shiftRaw = await AsyncStorage.getItem(STORAGE_KEYS.SHIFT_SALES);
+    const shiftRaw = await safeStorage.getItem(STORAGE_KEYS.SHIFT_SALES);
     const shiftSales: Sale[] = shiftRaw ? JSON.parse(shiftRaw) : [];
     shiftSales.unshift(sale);
-    await AsyncStorage.setItem(STORAGE_KEYS.SHIFT_SALES, JSON.stringify(shiftSales));
+    await safeStorage.setItem(STORAGE_KEYS.SHIFT_SALES, JSON.stringify(shiftSales));
 
     // 2. Décrémenter le stock dans le cache local
-    const cachedProductsRaw = await AsyncStorage.getItem(STORAGE_KEYS.CACHED_PRODUCTS);
+    const cachedProductsRaw = await safeStorage.getItem(STORAGE_KEYS.CACHED_PRODUCTS);
     if (cachedProductsRaw) {
       const prods: Product[] = JSON.parse(cachedProductsRaw);
       const updated = prods.map(p => {
@@ -178,7 +204,7 @@ export const posService = {
         }
         return p;
       });
-      await AsyncStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(updated));
+      await safeStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(updated));
     }
 
     // 3. Envoi Supabase ou mise en file d'attente
@@ -214,17 +240,17 @@ export const posService = {
     }
 
     // Sauvegarde en file d'attente hors-ligne
-    const queueRaw = await AsyncStorage.getItem(STORAGE_KEYS.OFFLINE_SALES);
+    const queueRaw = await safeStorage.getItem(STORAGE_KEYS.OFFLINE_SALES);
     const queue: Sale[] = queueRaw ? JSON.parse(queueRaw) : [];
     queue.push({ ...sale, is_synced: false });
-    await AsyncStorage.setItem(STORAGE_KEYS.OFFLINE_SALES, JSON.stringify(queue));
+    await safeStorage.setItem(STORAGE_KEYS.OFFLINE_SALES, JSON.stringify(queue));
 
     return { success: true, synced: false };
   },
 
   // --- SYNCHRONISATION DE LA FILE HORS-LIGNE ---
   async getOfflineQueueCount(): Promise<number> {
-    const queueRaw = await AsyncStorage.getItem(STORAGE_KEYS.OFFLINE_SALES);
+    const queueRaw = await safeStorage.getItem(STORAGE_KEYS.OFFLINE_SALES);
     if (!queueRaw) return 0;
     const queue: Sale[] = JSON.parse(queueRaw);
     return queue.length;
@@ -235,7 +261,7 @@ export const posService = {
       return { syncedCount: 0, remainingCount: await this.getOfflineQueueCount() };
     }
 
-    const queueRaw = await AsyncStorage.getItem(STORAGE_KEYS.OFFLINE_SALES);
+    const queueRaw = await safeStorage.getItem(STORAGE_KEYS.OFFLINE_SALES);
     if (!queueRaw) return { syncedCount: 0, remainingCount: 0 };
 
     const queue: Sale[] = JSON.parse(queueRaw);
@@ -279,13 +305,13 @@ export const posService = {
       }
     }
 
-    await AsyncStorage.setItem(STORAGE_KEYS.OFFLINE_SALES, JSON.stringify(failedSales));
+    await safeStorage.setItem(STORAGE_KEYS.OFFLINE_SALES, JSON.stringify(failedSales));
     return { syncedCount, remainingCount: failedSales.length };
   },
 
   // --- HISTORIQUE LOCAL DU SHIFT ---
   async getShiftSales(): Promise<Sale[]> {
-    const raw = await AsyncStorage.getItem(STORAGE_KEYS.SHIFT_SALES);
+    const raw = await safeStorage.getItem(STORAGE_KEYS.SHIFT_SALES);
     return raw ? JSON.parse(raw) : [];
   },
 };
