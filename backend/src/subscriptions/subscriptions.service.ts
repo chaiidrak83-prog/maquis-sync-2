@@ -91,6 +91,24 @@ export class SubscriptionsService {
     const updated = await this.subscriptionRepo.save(sub);
     this.logger.log(`Souscription [ID: ${id}] validée avec succès pour ${sub.user_name}`);
 
+    // Mise à jour du statut de l'utilisateur et de l'établissement lié
+    if (sub.user_id) {
+      try {
+        const userRepo = this.subscriptionRepo.manager.getRepository('User');
+        await userRepo.update(sub.user_id, { statut_paiement: 'actif' });
+        const user = await userRepo.findOne({ where: { id: sub.user_id } });
+        if (user && (user as any).establishment_id) {
+          const estRepo = this.subscriptionRepo.manager.getRepository('Establishment');
+          await estRepo.update((user as any).establishment_id, {
+            statut_paiement: 'actif',
+            subscription_status: 'active',
+          });
+        }
+      } catch (e) {
+        this.logger.warn(`Impossible de synchroniser le statut utilisateur lié : ${e}`);
+      }
+    }
+
     // 2. Envoi de la notification push via Expo Server SDK
     let pushSent = false;
     const notificationBody =

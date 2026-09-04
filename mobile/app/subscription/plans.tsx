@@ -23,7 +23,7 @@ export default function PlansScreen() {
 
   const handleProceedToCheckout = () => {
     router.push({
-      pathname: '/subscription/checkout' as any,
+      pathname: '/subscription/register' as any,
       params: {
         plan: selectedPlan.id,
         montant: selectedPlan.montant.toString(),

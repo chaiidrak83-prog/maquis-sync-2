@@ -93,9 +93,9 @@ export const subscriptionService = {
   /**
    * Ouvre l'application WhatsApp avec le message pré-rempli
    */
-  async openWhatsAppProof(plan: string, montant: number, clientName?: string, phone?: string): Promise<void> {
+  async openWhatsAppProof(plan: string, montant: number, nomMaquis?: string, phone?: string): Promise<void> {
     const commercialNumber = '22678559888';
-    const message = `Bonjour, voici la capture de mon paiement Orange Money pour la Formule ${plan} (${montant.toLocaleString()} F CFA). Client: ${clientName || 'Propriétaire'} ${phone ? `(Tél: ${phone})` : ''}`;
+    const message = `Bonjour, voici la capture de mon paiement Orange Money pour la Formule ${plan} (${montant.toLocaleString('fr-FR')} F CFA).\nÉtablissement: ${nomMaquis || 'Mon Maquis'}\nTéléphone: ${phone || 'Non renseigné'}`;
     const url = `https://wa.me/${commercialNumber}?text=${encodeURIComponent(message)}`;
 
     const supported = await Linking.canOpenURL(url).catch(() => true);
@@ -103,6 +103,74 @@ export const subscriptionService = {
       await Linking.openURL(url);
     } else {
       await Linking.openURL(`whatsapp://send?phone=${commercialNumber}&text=${encodeURIComponent(message)}`);
+    }
+  },
+
+  /**
+   * Enregistrement (Onboarding) de l'établissement avec mot de passe et sélection de plan
+   */
+  async registerEstablishment(data: {
+    nom_maquis: string;
+    phone: string;
+    password: string;
+    plan: 'Découverte' | 'Accès' | 'Premium';
+    montant: number;
+  }): Promise<{
+    access_token: string;
+    statut_paiement: string;
+    establishment: { id: string; nom: string };
+    user: { id: string; telephone: string; role: string };
+    subscription: { id: string; plan: string; montant: number; statut_paiement: string };
+  }> {
+    const expoPushToken = await this.getExpoPushToken();
+
+    // 1. Essai d'appel direct au backend NestJS /auth/register
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nom_maquis: data.nom_maquis,
+          phone: data.phone,
+          password: data.password,
+          plan: data.plan,
+          montant: data.montant,
+          expo_push_token: expoPushToken,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.access_token) {
+          await AsyncStorage.setItem('@maquis_jwt_token', json.access_token);
+        }
+        if (json.subscription?.id) {
+          await AsyncStorage.setItem(STORAGE_KEYS.ACTIVE_SUB_ID, json.subscription.id);
+        }
+        await AsyncStorage.setItem('@maquis_current_establishment', JSON.stringify(json.establishment));
+        await AsyncStorage.setItem('@maquis_current_user', JSON.stringify(json.user));
+        return json;
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || `Erreur serveur (${res.status})`);
+      }
+    } catch (e: any) {
+      console.warn('Backend NestJS indisponible ou en erreur, mode de repli...', e);
+      // Mode de secours
+      const mockSubId = `sub_${Date.now()}`;
+      await AsyncStorage.setItem(STORAGE_KEYS.ACTIVE_SUB_ID, mockSubId);
+      return {
+        access_token: 'fallback-jwt-token-pending',
+        statut_paiement: 'en_attente',
+        establishment: { id: `est_${Date.now()}`, nom: data.nom_maquis },
+        user: { id: `usr_${Date.now()}`, telephone: data.phone, role: 'OWNER' },
+        subscription: {
+          id: mockSubId,
+          plan: data.plan,
+          montant: data.montant,
+          statut_paiement: 'en_attente',
+        },
+      };
     }
   },
 

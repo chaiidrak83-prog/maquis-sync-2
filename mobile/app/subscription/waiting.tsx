@@ -22,12 +22,15 @@ export default function WaitingScreen() {
     montant?: string;
     userName?: string;
     phone?: string;
+    nom_maquis?: string;
+    nomMaquis?: string;
   }>();
 
   const subscriptionId = params.id || 'current';
   const planName = params.plan || 'Accès';
   const planMontant = parseInt(params.montant || '14900', 10);
-  const clientName = params.userName || 'Gérant';
+  const nomMaquis = params.nom_maquis || params.nomMaquis || params.userName || 'Mon Maquis';
+  const phone = params.phone || '';
 
   const [status, setStatus] = useState<'en_attente' | 'actif'>('en_attente');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -89,7 +92,7 @@ export default function WaitingScreen() {
   };
 
   const handleOpenWhatsAppReminder = () => {
-    subscriptionService.openWhatsAppProof(planName, planMontant, clientName, params.phone);
+    subscriptionService.openWhatsAppProof(planName, planMontant, nomMaquis, phone);
   };
 
   return (
@@ -138,9 +141,15 @@ export default function WaitingScreen() {
                 <Text style={styles.detailValue}>{planMontant.toLocaleString('fr-FR')} F CFA</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Client :</Text>
-                <Text style={styles.detailValue}>{clientName}</Text>
+                <Text style={styles.detailLabel}>Établissement :</Text>
+                <Text style={styles.detailValue}>{nomMaquis}</Text>
               </View>
+              {phone ? (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Téléphone :</Text>
+                  <Text style={styles.detailValue}>{phone}</Text>
+                </View>
+              ) : null}
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Statut :</Text>
                 <View style={styles.statusBadgeWaiting}>

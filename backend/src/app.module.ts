@@ -3,6 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
+import { AuthModule } from './auth/auth.module';
+import { User } from './auth/entities/user.entity';
+import { Establishment } from './auth/entities/establishment.entity';
+import { InventoryController } from './inventory/inventory.controller';
+import { OrdersController } from './orders/orders.controller';
 
 @Module({
   imports: [
@@ -17,7 +22,6 @@ import { Subscription } from './subscriptions/entities/subscription.entity';
         const dbUrl = config.get<string>('DATABASE_URL');
         const dbPassword = config.get<string>('DB_PASSWORD');
 
-        // Si une URL ou un mot de passe Postgres est fourni, utiliser PostgreSQL
         if (dbUrl || (dbPassword && dbPassword.trim().length > 0)) {
           return {
             type: 'postgres',
@@ -27,24 +31,25 @@ import { Subscription } from './subscriptions/entities/subscription.entity';
             username: config.get<string>('DB_USER', 'postgres'),
             password: dbPassword,
             database: config.get<string>('DB_NAME', 'postgres'),
-            entities: [Subscription],
+            entities: [Subscription, User, Establishment],
             synchronize: false,
             ssl: { rejectUnauthorized: false },
           };
         }
 
-        // Mode autonome haute résilience avec sqljs (aucune dépendance externe requise)
         return {
           type: 'sqljs',
           location: './subscriptions.sqlite',
           autoSave: true,
-          entities: [Subscription],
+          entities: [Subscription, User, Establishment],
           synchronize: true,
           logging: false,
         };
       },
     }),
     SubscriptionsModule,
+    AuthModule,
   ],
+  controllers: [InventoryController, OrdersController],
 })
 export class AppModule {}

@@ -17,6 +17,7 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="subscription/plans" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="subscription/register" options={{ headerShown: false }} />
         <Stack.Screen name="subscription/checkout" options={{ headerShown: false }} />
         <Stack.Screen name="subscription/waiting" options={{ headerShown: false }} />
         <Stack.Screen name="admin/subscriptions" options={{ headerShown: false }} />
