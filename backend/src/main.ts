@@ -24,8 +24,8 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
-  console.log(`[BOOT] 4. Listening on port ${port}...`);
-  await app.listen(port);
+  console.log(`[BOOT] 4. Listening on 0.0.0.0:${port}...`);
+  await app.listen(port, '0.0.0.0');
   logger.log(`🚀 Serveur NestJS MaquisSaaS démarré avec succès sur http://localhost:${port}`);
   console.log(`[BOOT] 5. Server ready at http://localhost:${port}`);
 }

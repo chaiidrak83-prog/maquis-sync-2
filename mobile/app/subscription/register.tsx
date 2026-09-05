@@ -18,8 +18,17 @@ export default function RegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ plan?: string; montant?: string }>();
 
-  const planName = (params.plan as 'Découverte' | 'Accès' | 'Premium') || 'Accès';
-  const planMontant = parseInt(params.montant || '14900', 10);
+  const [selectedPlan, setSelectedPlan] = useState<'Découverte' | 'Accès' | 'Premium'>(
+    (params.plan as any) || 'Accès',
+  );
+
+  const PLAN_PRICES: Record<'Découverte' | 'Accès' | 'Premium', number> = {
+    Découverte: 9900,
+    Accès: 14900,
+    Premium: 19900,
+  };
+
+  const planMontant = PLAN_PRICES[selectedPlan];
 
   // Les 3 champs obligatoires requis par la spécification
   const [nomMaquis, setNomMaquis] = useState('');
@@ -50,7 +59,7 @@ export default function RegisterScreen() {
         nom_maquis: nomMaquis.trim(),
         phone: phone.trim(),
         password: password.trim(),
-        plan: planName,
+        plan: selectedPlan,
         montant: planMontant,
       });
 
@@ -59,7 +68,7 @@ export default function RegisterScreen() {
         pathname: '/subscription/waiting' as any,
         params: {
           id: res.subscription.id,
-          plan: planName,
+          plan: selectedPlan,
           montant: planMontant.toString(),
           nom_maquis: nomMaquis.trim(),
           phone: phone.trim(),
@@ -86,12 +95,40 @@ export default function RegisterScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Formula Selection Cards */}
+        <View style={styles.planSelectContainer}>
+          <Text style={styles.sectionHeading}>Sélectionnez votre Formule :</Text>
+          <View style={styles.planPillsRow}>
+            {(['Découverte', 'Accès', 'Premium'] as const).map(p => {
+              const isSelected = selectedPlan === p;
+              return (
+                <TouchableOpacity
+                  key={p}
+                  style={[styles.planPill, isSelected && styles.planPillActive]}
+                  onPress={() => setSelectedPlan(p)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.planPillName, isSelected && styles.planPillNameActive]}>{p}</Text>
+                  <Text style={[styles.planPillPrice, isSelected && styles.planPillPriceActive]}>
+                    {PLAN_PRICES[p].toLocaleString('fr-FR')} F
+                  </Text>
+                  {p === 'Accès' && (
+                    <View style={styles.miniBadge}>
+                      <Text style={styles.miniBadgeText}>POPULAIRE</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Selected Plan Summary Banner */}
         <View style={styles.planSummaryCard}>
           <View style={styles.planSummaryHeader}>
-            <Text style={styles.planSummarySub}>Formule choisie :</Text>
+            <Text style={styles.planSummarySub}>Formule active :</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{planName}</Text>
+              <Text style={styles.badgeText}>{selectedPlan}</Text>
             </View>
           </View>
           <Text style={styles.planSummaryPrice}>
@@ -106,7 +143,7 @@ export default function RegisterScreen() {
         <View style={styles.card}>
           <Text style={styles.formTitle}>Création de votre Établissement</Text>
           <Text style={styles.formSubtitle}>
-            Ces identifiants vous permettront d'accéder à l'application dès validation de votre paiement.
+            Ces 3 champs sont nécessaires pour ouvrir votre compte et générer votre accès.
           </Text>
 
           {/* Champ 1 : Nom du maquis */}
@@ -232,6 +269,67 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 110,
+  },
+  planSelectContainer: {
+    marginBottom: 16,
+  },
+  sectionHeading: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  planPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  planPill: {
+    flex: 1,
+    backgroundColor: '#131b2e',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#1e293b',
+    position: 'relative',
+  },
+  planPillActive: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+  },
+  planPillName: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  planPillNameActive: {
+    color: '#10b981',
+    fontWeight: '900',
+  },
+  planPillPrice: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  planPillPriceActive: {
+    color: '#f8fafc',
+  },
+  miniBadge: {
+    position: 'absolute',
+    top: -8,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  miniBadgeText: {
+    color: '#090d16',
+    fontSize: 8,
+    fontWeight: '900',
   },
   planSummaryCard: {
     backgroundColor: '#131b2e',

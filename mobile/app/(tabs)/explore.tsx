@@ -13,6 +13,7 @@ import {
 import { posService, User, Sale } from '@/services/posService';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
+import ManagerProductModal from '@/components/ManagerProductModal';
 
 export default function ShiftScreen() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function ShiftScreen() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState<string | null>(null);
+  const [isManagerModalVisible, setIsManagerModalVisible] = useState(false);
 
   const loadShiftData = useCallback(async () => {
     const user = await posService.getStoredUser();
@@ -198,6 +200,80 @@ export default function ShiftScreen() {
           </View>
         </View>
 
+        {/* CARTE GESTION DES BOUTEILLES & CATALOGUE (GÉRANT) */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Catalogue Boissons & Photos Bouteilles</Text>
+          <Text style={styles.cardSubtitle}>
+            Prenez en photo les bouteilles pour la caisse visuelle des serveuses
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#f59e0b',
+              paddingVertical: 12,
+              borderRadius: 10,
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+              marginTop: 4,
+            }}
+            onPress={() => setIsManagerModalVisible(true)}
+          >
+            <Text style={{ color: '#090d16', fontWeight: '900', fontSize: 13 }}>
+              📸 Prendre en photo une bouteille
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* CARTE GESTION DE L'ÉQUIPE & VALIDATION HIÉRARCHIQUE */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Gestion d'Équipe & Validations</Text>
+          <Text style={styles.cardSubtitle}>
+            Validez les demandes d'accès du personnel selon la hiérarchie et vos quotas
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: '#1e293b',
+                borderWidth: 1,
+                borderColor: '#38bdf8',
+                paddingVertical: 12,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                alignItems: 'center',
+              }}
+              onPress={() => router.push('/owner/team' as any)}
+            >
+              <Text style={{ fontSize: 18, marginBottom: 4 }}>👑</Text>
+              <Text style={{ color: '#38bdf8', fontWeight: '800', fontSize: 12, textAlign: 'center' }}>
+                Mes Gérants
+              </Text>
+              <Text style={{ color: '#64748b', fontSize: 10 }}>Espace Propriétaire</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: '#1e293b',
+                borderWidth: 1,
+                borderColor: '#10b981',
+                paddingVertical: 12,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                alignItems: 'center',
+              }}
+              onPress={() => router.push('/manager/team' as any)}
+            >
+              <Text style={{ fontSize: 18, marginBottom: 4 }}>🍹</Text>
+              <Text style={{ color: '#10b981', fontWeight: '800', fontSize: 12, textAlign: 'center' }}>
+                Mes Serveuses
+              </Text>
+              <Text style={{ color: '#64748b', fontSize: 10 }}>Espace Gérant</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* STATISTIQUES DU SHIFT */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
@@ -251,6 +327,15 @@ export default function ShiftScreen() {
           />
         )}
       </View>
+
+      <ManagerProductModal
+        visible={isManagerModalVisible}
+        onClose={() => setIsManagerModalVisible(false)}
+        onProductAdded={() => {
+          setIsManagerModalVisible(false);
+          loadShiftData();
+        }}
+      />
     </SafeAreaView>
   );
 }

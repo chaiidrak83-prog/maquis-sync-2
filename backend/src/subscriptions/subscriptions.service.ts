@@ -112,7 +112,7 @@ export class SubscriptionsService {
     // 2. Envoi de la notification push via Expo Server SDK
     let pushSent = false;
     const notificationBody =
-      'Abonnement activé : Votre paiement a été validé. Vous pouvez maintenant utiliser votre application !';
+      'Abonnement activé ! Vous pouvez utiliser l\'application.';
 
     if (sub.expo_push_token) {
       pushSent = await this.sendPushNotification(

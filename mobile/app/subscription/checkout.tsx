@@ -142,7 +142,7 @@ export default function CheckoutScreen() {
             1. Effectuez le paiement de <Text style={{ fontWeight: 'bold', color: '#10b981' }}>{planMontant.toLocaleString('fr-FR')} F CFA</Text> par Orange Money ou Moov Money au :
           </Text>
           <View style={styles.phoneBox}>
-            <Text style={styles.phoneNumber}>+226 78 55 98 88</Text>
+            <Text style={styles.phoneNumber}>+226 65 61 34 72</Text>
             <Text style={styles.phoneRecipient}>Bénéficiaire : MaquisSync Support</Text>
           </View>
 

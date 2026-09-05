@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { subscriptionService } from '../../services/subscriptionService';
 
 export default function WaitingScreen() {
@@ -87,7 +88,22 @@ export default function WaitingScreen() {
     }
   };
 
-  const handleEnterApp = () => {
+  const handleEnterApp = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('@maquis_current_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        u.statut_paiement = 'actif';
+        await AsyncStorage.setItem('@maquis_current_user', JSON.stringify(u));
+        await AsyncStorage.setItem('pos_waitress_user', JSON.stringify({
+          id: u.id || 'owner_1',
+          name: nomMaquis || u.name || 'Propriétaire',
+          phone: phone || u.phone,
+          role: 'OWNER',
+          statut_paiement: 'actif',
+        }));
+      }
+    } catch (e) {}
     router.replace('/(tabs)');
   };
 

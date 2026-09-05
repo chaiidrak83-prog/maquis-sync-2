@@ -41,12 +41,16 @@ import {
   Layers,
   FileText,
   Send,
-  Printer
+  Printer,
+  ShieldCheck
 } from 'lucide-react';
+import SuperAdminConsole from './components/SuperAdminConsole';
+import AdminLoginScreen from './components/AdminLoginScreen';
+import OnboardingModal from './components/OnboardingModal';
 
 export default function App() {
   // --- Simulation & Database Global States ---
-  const [viewMode, setViewMode] = useState('LANDING'); // 'LANDING' | 'MOBILE_POS'
+  const [viewMode, setViewMode] = useState('LANDING'); // 'LANDING' | 'MOBILE_POS' | 'SUPER_ADMIN' | 'BOSS_ADMIN'
   const [establishmentId, setEstablishmentId] = useState('a0000000-0000-0000-0000-000000000001');
   const [supabaseActive, setSupabaseActive] = useState(isSupabaseConfigured());
   const [isDbLoading, setIsDbLoading] = useState(false);
@@ -54,9 +58,40 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState('DECOUVERTE'); // 'DECOUVERTE' | 'ACCES' | 'PREMIUM'
   const [ussdTemplate, setUssdTemplate] = useState('*144*4*2*[MONTANT]*[NUMERO_CLIENT]#');
+  const [impersonatedEstablishment, setImpersonatedEstablishment] = useState(null);
+  const [secretWebTaps, setSecretWebTaps] = useState([]);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [onboardingInitialPlan, setOnboardingInitialPlan] = useState('Accès');
 
-  // Multi-Rôle users database (Propriétaire, Gérant, Serveuses)
+  // Écoute de l'URL cachée #boss-admin ou /boss-admin
+  useEffect(() => {
+    const handleUrlCheck = () => {
+      const hash = window.location.hash;
+      const path = window.location.pathname;
+      if (hash === '#boss-admin' || hash === '#/boss-admin' || path === '/boss-admin') {
+        setViewMode('BOSS_ADMIN');
+      }
+    };
+    handleUrlCheck();
+    window.addEventListener('hashchange', handleUrlCheck);
+    return () => window.removeEventListener('hashchange', handleUrlCheck);
+  }, []);
+
+  // Geste secret : 5 clics rapides sur le logo en moins de 2 secondes
+  const handleSecretLogoTrigger = () => {
+    const now = Date.now();
+    const recent = [...secretWebTaps.filter(t => now - t <= 2000), now];
+    setSecretWebTaps(recent);
+    if (recent.length >= 5) {
+      setSecretWebTaps([]);
+      window.location.hash = 'boss-admin';
+      setViewMode('BOSS_ADMIN');
+    }
+  };
+
+  // Multi-Rôle users database (Super Admin, Propriétaire, Gérant, Serveuses)
   const [users, setUsers] = useState([
+    { id: 'sa1', name: 'Super Administrateur', phone: '00000000', pin: '9999', role: 'SUPER_ADMIN', status: 'VALIDATED', is_active: true },
     { id: 'u1', name: 'Alassane Touré', phone: '76000000', pin: '1111', role: 'OWNER', status: 'VALIDATED', is_active: true },
     { id: 'u2', name: 'Koffi Mensah', phone: '70222222', pin: '2222', role: 'MANAGER', status: 'VALIDATED', is_active: true },
     { id: 'w1', name: 'Awa Diallo', phone: '70123456', pin: '3333', role: 'WAITRESS', status: 'VALIDATED', is_active: true },
@@ -196,10 +231,13 @@ export default function App() {
           })));
         }
         if (dbUsers && dbUsers.length > 0) {
-          setUsers(dbUsers.map(u => ({
-            ...u,
-            pin: u.pin_hash
-          })));
+          setUsers([
+            { id: 'sa1', name: 'Super Administrateur', phone: '00000000', pin: '9999', role: 'SUPER_ADMIN', status: 'VALIDATED', is_active: true },
+            ...dbUsers.map(u => ({
+              ...u,
+              pin: u.pin_hash
+            }))
+          ]);
         }
         if (dbSales && dbSales.length > 0) {
           setSales(dbSales.map(s => ({
@@ -261,10 +299,13 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
         staffService.getAll(establishmentId).then(data => {
           if (data) {
-            setUsers(data.map(u => ({
-              ...u,
-              pin: u.pin_hash
-            })));
+            setUsers([
+              { id: 'sa1', name: 'Super Administrateur', phone: '00000000', pin: '9999', role: 'SUPER_ADMIN', status: 'VALIDATED', is_active: true },
+              ...data.map(u => ({
+                ...u,
+                pin: u.pin_hash
+              }))
+            ]);
           }
         });
       })
@@ -300,8 +341,23 @@ export default function App() {
   // Login handler
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    if (!phoneLoginInput || !pinLoginInput) {
-      setAuthError('Veuillez renseigner votre téléphone et votre PIN.');
+    if (!phoneLoginInput) {
+      setAuthError('Veuillez renseigner votre téléphone.');
+      return;
+    }
+
+    // ACCÈS DIRECT SUPER ADMINISTRATEUR (Tél: 00000000)
+    if (phoneLoginInput === '00000000') {
+      setAuthError('');
+      setLoggedInUserId('sa1');
+      setPhoneLoginInput('');
+      setPinLoginInput('');
+      setViewMode('SUPER_ADMIN');
+      return;
+    }
+
+    if (!pinLoginInput) {
+      setAuthError('Veuillez renseigner votre code PIN.');
       return;
     }
 
@@ -654,109 +710,146 @@ export default function App() {
 
   return (
     <div id="root">
-      {/* 1. SITE HEADER */}
-      <header className="site-header">
-        <div className="container header-wrapper">
-          <div className="logo">
-            <Beer size={28} />
-            MAQUIS<span>SYNC</span>
-          </div>
-          
-          <nav>
-            <ul className="nav-menu">
-              <li><a href="#features" className="nav-link">Pourquoi choisir ?</a></li>
-              <li><a href="#features-detail" className="nav-link">Fonctionnalités</a></li>
-              <li><a href="#demo" className="nav-link">Simulateur</a></li>
-              <li><a href="#tarifs" className="nav-link">Tarifs</a></li>
-              <li><a href="#contact" className="nav-link">Contact</a></li>
-            </ul>
-          </nav>
-
+      {/* IMPERSONATION SUPPORT BANNER */}
+      {impersonatedEstablishment && (
+        <div style={{
+          background: 'linear-gradient(90deg, #dc2626, #b91c1c)',
+          color: '#ffffff',
+          padding: '10px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'sticky',
+          top: 0,
+          zIndex: 99999,
+          boxShadow: '0 4px 16px rgba(220, 38, 38, 0.5)'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Supabase Live Status Badge */}
-            <div 
-              style={{ 
-                padding: '6px 12px', 
-                fontSize: '12px', 
-                borderRadius: '8px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                background: supabaseActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                border: `1px solid ${supabaseActive ? '#10b981' : '#f59e0b'}`,
-                color: supabaseActive ? '#10b981' : '#b45309',
-                fontWeight: 600
-              }}
-              title={supabaseActive ? "Connecté au projet Supabase en ligne : maquis sync" : "Mode démo local"}
-            >
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: supabaseActive ? '#10b981' : '#f59e0b', display: 'inline-block' }}></span>
-              {isDbLoading ? 'Chargement DB...' : supabaseActive ? 'Supabase Connecté' : 'Mode Démo'}
-            </div>
-
-            {/* Internet Status Toggle */}
-            <button 
-              onClick={() => setIsOnline(!isOnline)} 
-              className="btn btn-secondary" 
-              style={{ 
-                padding: '8px 16px', 
-                fontSize: '13px', 
-                display: 'flex', 
-                gap: '6px', 
-                alignItems: 'center', 
-                borderColor: isOnline ? 'var(--secondary)' : 'var(--danger)',
-                background: isOnline ? 'rgba(16, 185, 129, 0.05)' : 'rgba(244, 63, 94, 0.05)'
-              }}
-            >
-              {isOnline ? (
-                <>
-                  <Wifi size={16} style={{ color: 'var(--secondary)' }} />
-                  <span style={{ color: 'var(--secondary)' }}>Réseau Connecté</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff size={16} style={{ color: 'var(--danger)' }} />
-                  <span style={{ color: 'var(--danger)' }}>Réseau Coupé</span>
-                </>
-              )}
-            </button>
-            {/* Direct Switch to Mobile POS Simulator */}
-            <button 
-              onClick={() => {
-                if (viewMode === 'MOBILE_POS') {
-                  setViewMode('LANDING');
-                } else {
-                  setViewMode('MOBILE_POS');
-                  if (!loggedInUserId) {
-                    setLoggedInUserId('b0000000-0000-0000-0000-000000000003');
-                    setWaitressTab('commande');
-                  }
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }}
-              className="btn btn-primary"
-              style={{
-                padding: '9px 18px',
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: viewMode === 'MOBILE_POS' ? '#f59e0b' : 'linear-gradient(135deg, #10b981, #059669)',
-                borderColor: viewMode === 'MOBILE_POS' ? '#f59e0b' : '#10b981',
-                color: '#ffffff',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
-              }}
-            >
-              <Smartphone size={16} />
-              {viewMode === 'MOBILE_POS' ? '🖥️ Voir le SaaS Web' : '📱 Tester l’App Mobile Caisse'}
-            </button>
+            <span style={{ background: '#ffffff', color: '#dc2626', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 900 }}>
+              MODE SUPPORT ACTIF
+            </span>
+            <span style={{ fontSize: '13px' }}>
+              Session d'assistance en cours sur : <strong>{impersonatedEstablishment.name}</strong> (Propriétaire : {impersonatedEstablishment.ownerName} - {impersonatedEstablishment.phone})
+            </span>
           </div>
+          <button
+            onClick={() => {
+              setImpersonatedEstablishment(null);
+              setViewMode('SUPER_ADMIN');
+            }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.25)',
+              border: '1px solid rgba(255, 255, 255, 0.5)',
+              color: '#ffffff',
+              padding: '4px 14px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            Quitter le mode support ✕
+          </button>
         </div>
-      </header>
+      )}
 
-      {/* 2. HERO SECTION & MARKETING (HIDDEN IN MOBILE_POS MODE) */}
-      {viewMode !== 'MOBILE_POS' && (
+      {/* 1. SITE HEADER (HIDDEN IF IN FULL-SCREEN SUPER_ADMIN OU BOSS_ADMIN MODE) */}
+      {viewMode !== 'SUPER_ADMIN' && viewMode !== 'BOSS_ADMIN' && (
+        <header className="site-header">
+          <div className="container header-wrapper">
+            {/* LOGO ENVELOPPÉ POUR GESTE SECRET (5 clics en <2s -> /boss-admin) */}
+            <div 
+              className="logo" 
+              onClick={handleSecretLogoTrigger}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              title="MaquisSync"
+            >
+              <Beer size={28} />
+              MAQUIS<span>SYNC</span>
+            </div>
+            
+            <nav>
+              <ul className="nav-menu">
+                <li><a href="#features" className="nav-link">Pourquoi choisir ?</a></li>
+                <li><a href="#features-detail" className="nav-link">Fonctionnalités</a></li>
+                <li><a href="#demo" className="nav-link">Simulateur</a></li>
+                <li><a href="#tarifs" className="nav-link">Tarifs</a></li>
+                <li><a href="#contact" className="nav-link">Contact</a></li>
+              </ul>
+            </nav>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {viewMode === 'MOBILE_POS' ? (
+                <button
+                  onClick={() => setViewMode('LANDING')}
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    borderRadius: '10px',
+                  }}
+                >
+                  ← Retour au site
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
+                  className="btn btn-primary btn-pulse"
+                  style={{
+                    padding: '9px 20px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    border: 'none',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#ffffff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✨ S'abonner (7j Gratuits)
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* VIEW: HIDDEN ROUTE /boss-admin (ADMIN LOGIN SCREEN) */}
+      {viewMode === 'BOSS_ADMIN' && (
+        <AdminLoginScreen
+          onSuccess={() => {
+            setLoggedInUserId('sa1');
+            setViewMode('SUPER_ADMIN');
+          }}
+          onCancel={() => {
+            window.location.hash = '';
+            setViewMode('LANDING');
+          }}
+        />
+      )}
+
+      {/* VIEW: FULL SCREEN SUPER ADMIN CONSOLE */}
+      {viewMode === 'SUPER_ADMIN' && (
+        <SuperAdminConsole
+          onExit={() => {
+            window.location.hash = '';
+            setViewMode('LANDING');
+          }}
+          onImpersonate={(est) => {
+            setImpersonatedEstablishment(est);
+            setViewMode('MOBILE_POS');
+            setLoggedInUserId('u1');
+          }}
+        />
+      )}
+
+      {/* 2. HERO SECTION & MARKETING (HIDDEN IN MOBILE_POS AND SUPER_ADMIN MODES) */}
+      {viewMode === 'LANDING' && (
         <>
           <section className="hero-section">
         <div className="container">
@@ -769,8 +862,24 @@ export default function App() {
           <p className="hero-desc">
             Prenez les commandes en 2 étapes sur mobile, suivez les stocks en direct et recevez votre bilan tous les soirs sur WhatsApp.
           </p>
-          <div className="hero-actions">
-            <a href="#demo" className="btn btn-primary btn-lg">Essayer le Simulateur Gratuit</a>
+          <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
+              className="btn btn-primary btn-lg btn-pulse"
+              style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              ✨ S'abonner (7 Jours Gratuits)
+            </button>
+            <a href="#demo" className="btn btn-secondary btn-lg">Essayer le Simulateur Gratuit</a>
           </div>
         </div>
       </section>
@@ -883,7 +992,8 @@ export default function App() {
   )}
 
       {/* 4. DYNAMIC INTERACTIVE DEMO (UNIFIED MOBILE APP SIMULATOR) */}
-      <section id="demo" className="demo-section" style={viewMode === 'MOBILE_POS' ? { paddingTop: '24px' } : {}}>
+      {viewMode !== 'SUPER_ADMIN' && (
+        <section id="demo" className="demo-section" style={viewMode === 'MOBILE_POS' ? { paddingTop: '24px' } : {}}>
         <div className="container">
           {viewMode === 'MOBILE_POS' ? (
             <div style={{ textAlign: 'center', marginBottom: '28px' }}>
@@ -1025,7 +1135,13 @@ export default function App() {
                 <div className="device-screen">
                   {/* Status Bar */}
                   <div className="screen-header">
-                    <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '12px' }}>⚡ MAQUISYNC MOBILE</span>
+                    <span 
+                      onClick={handleSecretLogoTrigger}
+                      style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '12px', cursor: 'default', userSelect: 'none' }}
+                      title="MAQUISYNC MOBILE"
+                    >
+                      ⚡ MAQUISYNC MOBILE
+                    </span>
                     <div className="status-bar-indicators" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <button 
                         onClick={() => setShowMobileContactModal(true)} 
@@ -1213,6 +1329,62 @@ export default function App() {
                       // B. USER IS LOGGED IN: DYNAMIC ROUTING TO ROLE INTERFACE
                       
                       // ----------------------------------------------------
+                      // ROLE: SUPER ADMIN MOBILE VIEW
+                      // ----------------------------------------------------
+                      currentUser.role === 'SUPER_ADMIN' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between', padding: '6px 0' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <ShieldCheck size={16} style={{ color: '#ef4444' }} />
+                                <h4 style={{ margin: 0, fontSize: '14px', color: '#ef4444', fontWeight: 800 }}>Console Super Admin</h4>
+                              </div>
+                              <button onClick={() => setLoggedInUserId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><LogOut size={16} /></button>
+                            </div>
+
+                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
+                              <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase' }}>MRR GLOBAL DU SAAS</div>
+                              <div style={{ fontSize: '22px', fontWeight: 900, color: '#10b981' }}>29 800 F CFA</div>
+                              <div style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px' }}>4 maquis abonnés • 1 en attente</div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <button
+                                onClick={() => setViewMode('SUPER_ADMIN')}
+                                style={{
+                                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  padding: '12px',
+                                  fontWeight: 800,
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+                                }}
+                              >
+                                Ouvrir la Console Complète ➔
+                              </button>
+
+                              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '10px', fontSize: '11px' }}>
+                                <div style={{ fontWeight: 800, color: '#f8fafc', marginBottom: '4px' }}>⏳ Demande en attente :</div>
+                                <div style={{ color: '#cbd5e1' }}>Restaurant Oasis Tropical</div>
+                                <div style={{ color: '#10b981', fontWeight: 700 }}>19 900 F CFA (Formule Premium)</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'center', fontSize: '10px', color: '#64748b' }}>
+                            Session Maître chiffrée • Rôle SUPER_ADMIN
+                          </div>
+                        </div>
+                      ) :
+
+                      // ----------------------------------------------------
                       // ROLE: PROPRIÉTAIRE (OWNER) MOBILE VIEW
                       // ----------------------------------------------------
                       currentUser.role === 'OWNER' ? (
@@ -1317,7 +1489,7 @@ export default function App() {
                                       style={{ fontSize: '11px', padding: '4px 6px', background: '#0a0a0f', flex: 1 }}
                                       value={whatsappNumber}
                                       onChange={(e) => setWhatsappNumber(e.target.value)}
-                                      placeholder="+226 78 55 98 88"
+                                      placeholder="+226 65 61 34 72"
                                     />
                                     <button 
                                       onClick={handleSendSimulatedWhatsAppReport}
@@ -2016,7 +2188,7 @@ export default function App() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
                             <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Service Commercial</div>
-                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>+226 78 55 98 88</div>
+                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>+226 65 61 34 72</div>
                           </div>
                           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
                             <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Support Technique</div>
@@ -2070,9 +2242,10 @@ export default function App() {
           </div>
         </div>
       </section>
+      )}
 
-      {/* 5. TARIFS SECTION & FOOTER (HIDDEN IN MOBILE_POS MODE) */}
-      {viewMode !== 'MOBILE_POS' && (
+      {/* 5. TARIFS SECTION & FOOTER (HIDDEN IN MOBILE_POS AND SUPER_ADMIN MODES) */}
+      {viewMode === 'LANDING' && (
         <>
           <section id="tarifs" className="pricing-section">
         <div className="container">
@@ -2098,7 +2271,13 @@ export default function App() {
                 <li><Check size={16} /> Suivi des arrivées et départs</li>
                 <li><Check size={16} /> Sync automatique en arrière-plan</li>
               </ul>
-              <a href="#demo" className="btn btn-secondary" style={{ width: '100%' }}>Essayer Gratuitement</a>
+              <button 
+                onClick={() => { setOnboardingInitialPlan('Découverte'); setShowOnboardingModal(true); }} 
+                className="btn btn-secondary" 
+                style={{ width: '100%', cursor: 'pointer' }}
+              >
+                Essayer Gratuitement
+              </button>
             </div>
 
             <div className="glass-card" style={{ borderColor: 'var(--primary)', boxShadow: 'var(--shadow-glow)' }}>
@@ -2117,7 +2296,13 @@ export default function App() {
                 <li><Check size={16} /> Suivi des stocks & alertes</li>
                 <li><Check size={16} /> Syntaxe USSD Mobile Money dynamique</li>
               </ul>
-              <a href="#demo" className="btn btn-primary" style={{ width: '100%' }}>Lancer l'essai de 7 jours</a>
+              <button 
+                onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }} 
+                className="btn btn-primary btn-pulse" 
+                style={{ width: '100%', cursor: 'pointer' }}
+              >
+                Lancer l'essai de 7 jours
+              </button>
             </div>
 
             <div className="glass-card">
@@ -2136,7 +2321,13 @@ export default function App() {
                 <li><Check size={16} /> Support technique prioritaire 24/7</li>
                 <li><Check size={16} /> Rapports financiers périodiques</li>
               </ul>
-              <a href="#demo" className="btn btn-secondary" style={{ width: '100%' }}>Demander un essai</a>
+              <button 
+                onClick={() => { setOnboardingInitialPlan('Premium'); setShowOnboardingModal(true); }} 
+                className="btn btn-secondary" 
+                style={{ width: '100%', cursor: 'pointer' }}
+              >
+                Demander un essai
+              </button>
             </div>
           </div>
         </div>
@@ -2150,14 +2341,14 @@ export default function App() {
               Besoin d'aide ou d'une installation ?
             </h2>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-              Contactez-nous au <strong style={{ color: 'var(--primary)' }}>+226 78 55 98 88</strong> ou au <strong style={{ color: 'var(--secondary)' }}>70 33 32 69</strong>
+              Contactez-nous au <strong style={{ color: 'var(--primary)' }}>+226 65 61 34 72</strong> ou au <strong style={{ color: 'var(--secondary)' }}>70 33 32 69</strong>
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
               <div className="glass-card" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-card)', borderColor: 'var(--border-color)', minWidth: '260px' }}>
                 <Phone size={18} style={{ color: 'var(--primary)' }} />
                 <div style={{ textAlign: 'left' }}>
                   <span style={{ fontSize: '10px', color: 'var(--text-secondary)', display: 'block' }}>Service Commercial</span>
-                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)' }}>+226 78 55 98 88</span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)' }}>+226 65 61 34 72</span>
                 </div>
               </div>
               <div className="glass-card" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-card)', borderColor: 'var(--border-color)', minWidth: '260px' }}>
@@ -2187,6 +2378,17 @@ export default function App() {
       </footer>
     </>
   )}
+
+      {/* MODAL ONBOARDING CLIENT & PAIEMENT WHATSAPP */}
+      <OnboardingModal
+        isOpen={showOnboardingModal}
+        initialPlan={onboardingInitialPlan}
+        onClose={() => setShowOnboardingModal(false)}
+        onActivated={({ nomMaquis, phone, plan }) => {
+          setLoggedInUserId('u1');
+          setViewMode('MOBILE_POS');
+        }}
+      />
     </div>
   );
 }

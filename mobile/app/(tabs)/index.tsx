@@ -12,18 +12,98 @@ import {
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
+  Pressable,
+  ScrollView,
+  Image,
+  useWindowDimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { posService, Product, User, CartItem } from '@/services/posService';
+import { ManagerProductModal } from '@/components/ManagerProductModal';
+import StaffRegisterModal from '@/components/StaffRegisterModal';
+
+/**
+ * Bouton CTA Animé "S'abonner" avec effet de pulsation (Pulse via react-native-reanimated)
+ */
+function PulseSubscribeButton({ onPress }: { onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0.4);
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      true,
+    );
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.85, { duration: 800 }),
+        withTiming(0.2, { duration: 800 }),
+      ),
+      -1,
+      true,
+    );
+  }, [scale, glowOpacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const haloStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value * 1.12 }],
+    opacity: glowOpacity.value,
+  }));
+
+  return (
+    <View style={styles.pulseContainer}>
+      <Animated.View style={[styles.pulseHalo, haloStyle]} />
+      <Animated.View style={[styles.pulseBtnWrapper, animatedStyle]}>
+        <TouchableOpacity
+          style={styles.pulseButton}
+          onPress={onPress}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.pulseButtonIcon}>✨</Text>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.pulseButtonText}>S'ABONNER</Text>
+            <Text style={styles.pulseButtonSub}>7 Jours d'essai gratuit • Dès 9 900 F CFA</Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
 
 export default function PosScreen() {
+  const router = useRouter();
+  const [secretTaps, setSecretTaps] = useState<number[]>([]);
   // --- Auth state ---
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [phoneInput, setPhoneInput] = useState('70123456');
   const [pinInput, setPinInput] = useState('3333');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [isStaffRegisterVisible, setIsStaffRegisterVisible] = useState(false);
+  const [staffDefaultRole, setStaffDefaultRole] = useState<'SERVEUSE' | 'GERANT'>('SERVEUSE');
 
   // --- POS state ---
+  const { width } = useWindowDimensions();
+  const numColumns = width >= 600 ? 3 : 2;
+  const [selectedCategory, setSelectedCategory] = useState<string>('TOUS');
+  const [isManagerModalVisible, setIsManagerModalVisible] = useState(false);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<{ [productId: string]: number }>({});
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -35,6 +115,45 @@ export default function PosScreen() {
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MOBILE_MONEY'>('CASH');
   const [clientPhone, setClientPhone] = useState('');
   const [isProcessingSale, setIsProcessingSale] = useState(false);
+
+  // Code couleur dynamique par catégorie : Bière (Ambre #f59e0b), Sucrerie (Rouge #ef4444), Eau (Bleu #0ea5e9)
+  const getCategoryColor = (category?: string, name?: string) => {
+    const cat = (category || '').toLowerCase();
+    const n = (name || '').toLowerCase();
+    if (
+      cat.includes('bière') ||
+      cat.includes('biere') ||
+      n.includes('brakina') ||
+      n.includes('beaufort') ||
+      n.includes('guinness') ||
+      n.includes('sobebra') ||
+      n.includes('doppel')
+    ) {
+      return '#f59e0b'; // Ambre Bière
+    }
+    if (
+      cat.includes('sucr') ||
+      n.includes('coca') ||
+      n.includes('fanta') ||
+      n.includes('sprite') ||
+      n.includes('youki')
+    ) {
+      return '#ef4444'; // Rouge Sucrerie
+    }
+    if (cat.includes('eau') || n.includes('laafi') || n.includes('babali')) {
+      return '#0ea5e9'; // Bleu Eau
+    }
+    return '#10b981'; // Vert par défaut
+  };
+
+  const filteredProducts = products.filter(p => {
+    if (selectedCategory === 'TOUS') return true;
+    const catColor = getCategoryColor(p.category, p.name);
+    if (selectedCategory === 'Bière') return p.category === 'Bière' || catColor === '#f59e0b';
+    if (selectedCategory === 'Sucrerie') return p.category === 'Sucrerie' || catColor === '#ef4444';
+    if (selectedCategory === 'Eau') return p.category === 'Eau' || catColor === '#0ea5e9';
+    return true;
+  });
 
   // Check stored user on start
   useEffect(() => {
@@ -67,7 +186,7 @@ export default function PosScreen() {
   // Login handler
   const handleLogin = async () => {
     if (!phoneInput || !pinInput) {
-      setAuthError('Veuillez saisir votre numéro et votre code PIN');
+      setAuthError('Veuillez saisir le téléphone et votre code PIN');
       return;
     }
     setAuthError('');
@@ -82,16 +201,22 @@ export default function PosScreen() {
     }
   };
 
-  // Cart operations
-  const addToCart = (productId: string) => {
+  // Cart operations avec confirmation physique haptique (vibration légère)
+  const addToCart = async (productId: string) => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {}
     setCart(prev => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
   };
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = async (productId: string) => {
     if (!cart[productId]) return;
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {}
     setCart(prev => {
       const updated = { ...prev };
       if (updated[productId] <= 1) {
@@ -202,14 +327,33 @@ export default function PosScreen() {
     );
   };
 
-  // --- VUE CONNEXION SERVEUSE ---
+  // Geste secret : 5 appuis en moins de 2 secondes sur le logo
+  const handleSecretLogoPress = () => {
+    const now = Date.now();
+    const recentTaps = [...secretTaps.filter(t => now - t <= 2000), now];
+    setSecretTaps(recentTaps);
+    if (recentTaps.length >= 5) {
+      setSecretTaps([]);
+      router.push('/boss-admin');
+    }
+  };
+
+  // --- VUE CONNEXION & ONBOARDING CLIENT ---
   if (!currentUser) {
     return (
       <SafeAreaView style={styles.loginContainer}>
         <StatusBar barStyle="light-content" />
-        <View style={styles.loginCard}>
-          <Text style={styles.loginLogo}>MAQUIS<Text style={{ color: '#10b981' }}>SYNC</Text></Text>
-          <Text style={styles.loginSubtitle}>Caisse Tactique Serveuse</Text>
+        <ScrollView contentContainerStyle={styles.loginScroll} showsVerticalScrollIndicator={false}>
+          {/* BOUTON D'APPEL À L'ACTION (CTA) ANIMÉ AVEC PULSATION (PULSE) */}
+          <PulseSubscribeButton
+            onPress={() => router.push('/subscription/register' as any)}
+          />
+
+          <View style={styles.loginCard}>
+            <Pressable onPress={handleSecretLogoPress}>
+              <Text style={styles.loginLogo}>MAQUIS<Text style={{ color: '#10b981' }}>SYNC</Text></Text>
+            </Pressable>
+            <Text style={styles.loginSubtitle}>Caisse Tactique Serveuse & Établissement</Text>
 
           {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
 
@@ -256,9 +400,58 @@ export default function PosScreen() {
               <Text style={styles.demoBadgeText}>Awa Diallo (70123456 / PIN: 3333)</Text>
             </TouchableOpacity>
           </View>
+
+          {/* SÉPARATEUR REJOINDRE ÉTABLISSEMENT */}
+          <View style={styles.registerSectionDivider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>NOUVEAU PERSONNEL ?</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.staffRegisterButtonsRow}>
+            <TouchableOpacity
+              style={styles.staffRegisterBtn}
+              onPress={() => {
+                setStaffDefaultRole('SERVEUSE');
+                setIsStaffRegisterVisible(true);
+              }}
+            >
+              <Text style={styles.staffRegisterBtnIcon}>🍹</Text>
+              <View>
+                <Text style={styles.staffRegisterBtnTitle}>Rejoindre comme</Text>
+                <Text style={[styles.staffRegisterBtnRole, { color: '#f59e0b' }]}>Serveuse</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.staffRegisterBtn}
+              onPress={() => {
+                setStaffDefaultRole('GERANT');
+                setIsStaffRegisterVisible(true);
+              }}
+            >
+              <Text style={styles.staffRegisterBtnIcon}>👔</Text>
+              <View>
+                <Text style={styles.staffRegisterBtnTitle}>Rejoindre comme</Text>
+                <Text style={[styles.staffRegisterBtnRole, { color: '#38bdf8' }]}>Gérant</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-      </SafeAreaView>
-    );
+
+        {/* Modal d'auto-inscription Staff */}
+        <StaffRegisterModal
+          visible={isStaffRegisterVisible}
+          defaultRole={staffDefaultRole}
+          onClose={() => setIsStaffRegisterVisible(false)}
+          onRegisteredSuccess={(role, phone) => {
+            setPhoneInput(phone);
+            setIsStaffRegisterVisible(false);
+          }}
+        />
+      </ScrollView>
+    </SafeAreaView>
+  );
   }
 
   // --- VUE CAISSE ACTIVE (POS) ---
@@ -292,68 +485,154 @@ export default function PosScreen() {
         </View>
       </View>
 
-      {/* DRINKS CATALOGUE GRID */}
+      {/* QUICK CATEGORY FILTER BAR FOR INSTANT RECOGNITION */}
+      <View style={styles.categoryFilterBar}>
+        <TouchableOpacity
+          style={[styles.filterPill, selectedCategory === 'TOUS' && styles.filterPillActive]}
+          onPress={() => setSelectedCategory('TOUS')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.filterPillText, selectedCategory === 'TOUS' && styles.filterPillTextActive]}>
+            🍻 TOUT ({products.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterPill,
+            styles.filterPillBiere,
+            selectedCategory === 'Bière' && styles.filterPillActiveBiere,
+          ]}
+          onPress={() => setSelectedCategory('Bière')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.filterPillText, { color: '#f59e0b' }, selectedCategory === 'Bière' && styles.filterPillTextActive]}>
+            🍺 BIÈRES
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterPill,
+            styles.filterPillSucrerie,
+            selectedCategory === 'Sucrerie' && styles.filterPillActiveSucrerie,
+          ]}
+          onPress={() => setSelectedCategory('Sucrerie')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.filterPillText, { color: '#ef4444' }, selectedCategory === 'Sucrerie' && styles.filterPillTextActive]}>
+            🥤 SUCRES
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterPill,
+            styles.filterPillEau,
+            selectedCategory === 'Eau' && styles.filterPillActiveEau,
+          ]}
+          onPress={() => setSelectedCategory('Eau')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.filterPillText, { color: '#0ea5e9' }, selectedCategory === 'Eau' && styles.filterPillTextActive]}>
+            💧 EAU
+          </Text>
+        </TouchableOpacity>
+
+        {(currentUser.role === 'MANAGER' || currentUser.role === 'OWNER') && (
+          <TouchableOpacity
+            style={styles.addDrinkPill}
+            onPress={() => setIsManagerModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.addDrinkPillText}>+ 📸 Boisson</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* DRINKS CATALOGUE GRID (100% VISUEL - 80% IMAGE BOUTEILLE) */}
       {isLoadingProducts ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.loadingText}>Chargement des boissons...</Text>
+          <Text style={styles.loadingText}>Chargement des bouteilles...</Text>
         </View>
       ) : (
         <FlatList
-          data={products}
+          key={`grid_${numColumns}`}
+          data={filteredProducts}
           keyExtractor={item => item.id}
-          numColumns={2}
+          numColumns={numColumns}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             const qtyInCart = cart[item.id] || 0;
-            const isLowStock = item.current_stock <= 5;
+            const isOutOfStock = item.current_stock === 0;
+            const borderColor = getCategoryColor(item.category, item.name);
 
             return (
-              <View style={[styles.productCard, isLowStock && styles.productCardLow]}>
-                <View style={styles.productHeader}>
-                  <Text style={styles.productName}>{item.name}</Text>
-                  <Text style={styles.productVolume}>{item.volume}</Text>
-                </View>
-
-                <Text style={styles.productPrice}>{item.price.toLocaleString()} FCFA</Text>
-
-                <View style={styles.stockRow}>
-                  <Text style={[styles.stockText, isLowStock && styles.stockLowText]}>
-                    Stock: {item.current_stock}
+              <TouchableOpacity
+                style={[
+                  styles.visualCard,
+                  { borderColor },
+                  isOutOfStock && styles.visualCardDisabled,
+                  qtyInCart > 0 && styles.visualCardSelected,
+                ]}
+                activeOpacity={0.75}
+                onPress={() => {
+                  if (!isOutOfStock) addToCart(item.id);
+                }}
+                disabled={isOutOfStock}
+              >
+                {/* Pastille Catégorie (Haut Gauche) */}
+                <View style={[styles.categoryBadge, { backgroundColor: borderColor }]}>
+                  <Text style={styles.categoryBadgeText}>
+                    {borderColor === '#f59e0b' ? '🍺' : borderColor === '#ef4444' ? '🥤' : '💧'}
                   </Text>
                 </View>
 
-                {/* Actions boutons */}
-                <View style={styles.cardActions}>
-                  {qtyInCart > 0 ? (
-                    <View style={styles.counterRow}>
-                      <TouchableOpacity
-                        style={styles.counterBtn}
-                        onPress={() => removeFromCart(item.id)}
-                      >
-                        <Text style={styles.counterBtnText}>-</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.counterValue}>{qtyInCart}</Text>
-                      <TouchableOpacity
-                        style={styles.counterBtn}
-                        onPress={() => addToCart(item.id)}
-                      >
-                        <Text style={styles.counterBtnText}>+</Text>
-                      </TouchableOpacity>
+                {/* Pastille Quantité Flottante (Haut Droite) */}
+                {qtyInCart > 0 && (
+                  <View style={styles.floatingCartBadge}>
+                    <Text style={styles.floatingCartBadgeText}>{qtyInCart}</Text>
+                  </View>
+                )}
+
+                {/* 1. ZONE IMAGE BOUTEILLE (OCCUPE 80% DE L'ESPACE) */}
+                <View style={styles.cardImageContainer}>
+                  <Image
+                    source={{
+                      uri: item.imageUrl || 'https://via.placeholder.com/200?text=Boisson',
+                    }}
+                    style={styles.bottleImage}
+                    resizeMode="contain"
+                  />
+                  {isOutOfStock && (
+                    <View style={styles.outOfStockOverlay}>
+                      <Text style={styles.outOfStockText}>ÉPUISÉ</Text>
                     </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.addBtn, item.current_stock === 0 && styles.addBtnDisabled]}
-                      onPress={() => addToCart(item.id)}
-                      disabled={item.current_stock === 0}
-                    >
-                      <Text style={styles.addBtnText}>
-                        {item.current_stock === 0 ? 'Épuisé' : '+ Ajouter'}
-                      </Text>
-                    </TouchableOpacity>
                   )}
                 </View>
-              </View>
+
+                {/* 2. ZONE PRIX EN TRÈS GROS CARACTÈRES (AUCUNE DESCRIPTION TEXTUELLE) */}
+                <View style={styles.cardBottomBar}>
+                  {qtyInCart > 0 && (
+                    <TouchableOpacity
+                      style={styles.quickMinusBtn}
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        removeFromCart(item.id);
+                      }}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
+                      <Text style={styles.quickMinusBtnText}>−</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <Text style={[styles.giantPriceText, qtyInCart > 0 && { color: '#fbbf24' }]}>
+                    {item.price.toLocaleString('fr-FR')} F
+                  </Text>
+                </View>
+              </TouchableOpacity>
             );
           }}
         />
@@ -452,6 +731,16 @@ export default function PosScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* MODALE GÉRANT - AJOUT DE BOISSON AVEC CAMÉRA EXPO-IMAGE-PICKER */}
+      <ManagerProductModal
+        visible={isManagerModalVisible}
+        onClose={() => setIsManagerModalVisible(false)}
+        establishmentId={currentUser.establishment_id}
+        onProductAdded={(newProd) => {
+          setProducts(prev => [newProd, ...prev]);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -531,96 +820,204 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   listContent: {
-    padding: 12,
-    paddingBottom: 90,
+    padding: 10,
+    paddingBottom: 110,
   },
-  productCard: {
-    flex: 1,
-    margin: 6,
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
+  // --- BARRE DE FILTRES CATÉGORIES VISUELLES ---
+  categoryFilterBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#162032',
+    borderBottomWidth: 1,
+    borderBottomColor: '#243247',
+    gap: 6,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  filterPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#0f172a',
+    borderWidth: 1.5,
     borderColor: '#334155',
   },
-  productCardLow: {
+  filterPillActive: {
+    backgroundColor: '#38bdf8',
+    borderColor: '#38bdf8',
+  },
+  filterPillBiere: {
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+  },
+  filterPillActiveBiere: {
+    backgroundColor: '#f59e0b',
     borderColor: '#f59e0b',
   },
-  productHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 6,
+  filterPillSucrerie: {
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
-  productName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#f8fafc',
-    flex: 1,
+  filterPillActiveSucrerie: {
+    backgroundColor: '#ef4444',
+    borderColor: '#ef4444',
   },
-  productVolume: {
+  filterPillEau: {
+    borderColor: 'rgba(14, 165, 233, 0.4)',
+  },
+  filterPillActiveEau: {
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0ea5e9',
+  },
+  filterPillText: {
     fontSize: 12,
-    color: '#94a3b8',
-  },
-  productPrice: {
-    fontSize: 16,
     fontWeight: '800',
-    color: '#10b981',
-    marginVertical: 4,
-  },
-  stockRow: {
-    marginVertical: 4,
-  },
-  stockText: {
-    fontSize: 11,
     color: '#94a3b8',
   },
-  stockLowText: {
-    color: '#f59e0b',
-    fontWeight: '700',
+  filterPillTextActive: {
+    color: '#0f172a',
   },
-  cardActions: {
-    marginTop: 8,
-  },
-  addBtn: {
-    backgroundColor: '#3b82f6',
+  addDrinkPill: {
+    marginLeft: 'auto',
+    backgroundColor: '#10b981',
     paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 20,
   },
-  addBtnDisabled: {
-    backgroundColor: '#475569',
+  addDrinkPillText: {
+    color: '#0f172a',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
-  addBtnText: {
-    color: '#ffffff',
-    fontWeight: '700',
+
+  // --- CARTE BOISSON 100% VISUELLE (80% IMAGE BOUTEILLE) ---
+  visualCard: {
+    flex: 1,
+    margin: 6,
+    backgroundColor: '#131e33',
+    borderRadius: 22,
+    borderWidth: 3.5,
+    height: 255,
+    overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  visualCardSelected: {
+    backgroundColor: '#1b2a48',
+  },
+  visualCardDisabled: {
+    opacity: 0.35,
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 10,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  categoryBadgeText: {
     fontSize: 13,
   },
-  counterRow: {
+  floatingCartBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    minWidth: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#10b981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 5,
+    paddingHorizontal: 6,
+  },
+  floatingCartBadgeText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  // L'image de la bouteille occupe 80% de la hauteur de la carte
+  cardImageContainer: {
+    height: '78%',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    backgroundColor: '#0c1322',
+  },
+  bottleImage: {
+    width: '100%',
+    height: '100%',
+  },
+  outOfStockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outOfStockText: {
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+    letterSpacing: 1,
+  },
+  // Zone inférieure : Prix en très gros caractères
+  cardBottomBar: {
+    height: '22%',
+    width: '100%',
+    backgroundColor: '#080d18',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#0f172a',
-    borderRadius: 8,
-    padding: 2,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    position: 'relative',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
-  counterBtn: {
-    backgroundColor: '#334155',
+  giantPriceText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  quickMinusBtn: {
+    position: 'absolute',
+    left: 8,
     width: 32,
     height: 32,
-    borderRadius: 6,
-    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: '#263449',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#3b4e6b',
   },
-  counterBtnText: {
+  quickMinusBtnText: {
     color: '#ffffff',
     fontSize: 18,
-    fontWeight: '700',
-  },
-  counterValue: {
-    color: '#f8fafc',
-    fontWeight: '800',
-    fontSize: 15,
+    fontWeight: 'bold',
+    lineHeight: 20,
   },
   bottomDrawer: {
     position: 'absolute',
@@ -660,12 +1057,69 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 15,
   },
-  // Login Styles
+  // Login & Onboarding Styles
   loginContainer: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0b0f19',
+  },
+  loginScroll: {
+    padding: 20,
+    paddingTop: 40,
+    paddingBottom: 40,
     justifyContent: 'center',
-    padding: 24,
+  },
+  pulseContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    position: 'relative',
+  },
+  pulseHalo: {
+    position: 'absolute',
+    width: '100%',
+    height: 70,
+    borderRadius: 20,
+    backgroundColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  pulseBtnWrapper: {
+    width: '100%',
+  },
+  pulseButton: {
+    backgroundColor: '#10b981',
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    borderWidth: 1.5,
+    borderColor: '#34d399',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  pulseButtonIcon: {
+    fontSize: 22,
+  },
+  pulseButtonText: {
+    color: '#090d16',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  pulseButtonSub: {
+    color: '#064e3b',
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 1,
   },
   loginCard: {
     backgroundColor: '#1e293b',
@@ -841,5 +1295,50 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '800',
     fontSize: 16,
+  },
+  registerSectionDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#334155',
+  },
+  dividerLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    marginHorizontal: 10,
+    letterSpacing: 0.8,
+  },
+  staffRegisterButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  staffRegisterBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  staffRegisterBtnIcon: {
+    fontSize: 22,
+  },
+  staffRegisterBtnTitle: {
+    color: '#94a3b8',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  staffRegisterBtnRole: {
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

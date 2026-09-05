@@ -94,8 +94,8 @@ export const subscriptionService = {
    * Ouvre l'application WhatsApp avec le message pré-rempli
    */
   async openWhatsAppProof(plan: string, montant: number, nomMaquis?: string, phone?: string): Promise<void> {
-    const commercialNumber = '22678559888';
-    const message = `Bonjour, voici la capture de mon paiement Orange Money pour la Formule ${plan} (${montant.toLocaleString('fr-FR')} F CFA).\nÉtablissement: ${nomMaquis || 'Mon Maquis'}\nTéléphone: ${phone || 'Non renseigné'}`;
+    const commercialNumber = '22665613472';
+    const message = `Bonjour, voici mon paiement Orange Money pour le maquis ${nomMaquis || 'Mon Maquis'} (Tél: ${phone || 'Non renseigné'}) pour la Formule ${plan}.`;
     const url = `https://wa.me/${commercialNumber}?text=${encodeURIComponent(message)}`;
 
     const supported = await Linking.canOpenURL(url).catch(() => true);

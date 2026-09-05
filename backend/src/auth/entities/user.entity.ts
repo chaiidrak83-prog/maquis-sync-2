@@ -32,14 +32,29 @@ export class User {
   @Column({ length: 50, default: 'PENDING' })
   status: string;
 
+  @Column({ name: 'statut_approbation', length: 50, default: 'EN_ATTENTE' })
+  statut_approbation: string; // 'EN_ATTENTE' | 'APPROUVE' | 'REJETE'
+
   @Column({ name: 'statut_paiement', length: 50, default: 'en_attente' })
   statut_paiement: string;
+
+  @Column({ length: 50, default: 'Découverte' })
+  plan: string;
+
+  @Column({ type: 'int', default: 9900 })
+  montant: number;
+
+  @Column({ name: 'push_token', length: 255, nullable: true })
+  push_token: string;
 
   @Column({ name: 'expo_push_token', length: 255, nullable: true })
   expo_push_token: string;
 
   @Column({ name: 'is_active', default: true })
   is_active: boolean;
+
+  @Column({ name: 'last_active_at', nullable: true })
+  last_active_at: Date;
 
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date;

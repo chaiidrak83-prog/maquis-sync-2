@@ -9,6 +9,8 @@ export interface Product {
   volume: string;
   price: number;
   current_stock: number;
+  category?: 'Bière' | 'Sucrerie' | 'Eau' | string;
+  imageUrl?: string;
 }
 
 export interface User {
@@ -72,12 +74,62 @@ const STORAGE_KEYS = {
   SHIFT_SALES: '@maquis_shift_sales',
 };
 
-// Produits de secours locaux si pas de réseau au premier lancement
+// Illustrations bouteilles vectorielles intégrées pour le mode 100% hors-ligne
+export const DEFAULT_BOTTLE_IMAGES = {
+  biere_ambre: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 160" width="100%" height="100%"><rect width="100" height="160" rx="16" fill="%231c150c"/><path d="M42 12 h16 v22 h-16 Z" fill="%23d97706"/><rect x="40" y="34" width="20" height="24" rx="4" fill="%23b45309"/><path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="%23f59e0b"/><rect x="28" y="80" width="44" height="40" rx="6" fill="%23d97706"/><circle cx="50" cy="100" r="12" fill="%23fef3c7"/><path d="M47 92 l6 8 l-6 8" stroke="%2378350f" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
+  biere_verte: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 160" width="100%" height="100%"><rect width="100" height="160" rx="16" fill="%230c1c14"/><path d="M42 12 h16 v22 h-16 Z" fill="%23059669"/><rect x="40" y="34" width="20" height="24" rx="4" fill="%23047857"/><path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="%2310b981"/><rect x="28" y="80" width="44" height="40" rx="6" fill="%23047857"/><circle cx="50" cy="100" r="12" fill="%23d1fae5"/><path d="M44 100 h12 M50 94 v12" stroke="%23064e3b" stroke-width="3" stroke-linecap="round"/></svg>`,
+  stout_noire: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 160" width="100%" height="100%"><rect width="100" height="160" rx="16" fill="%23121214"/><path d="M42 12 h16 v22 h-16 Z" fill="%23451a03"/><rect x="40" y="34" width="20" height="24" rx="4" fill="%2327150a"/><path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="%231c1917"/><rect x="28" y="78" width="44" height="44" rx="6" fill="%23ca8a04"/><circle cx="50" cy="100" r="13" fill="%23000000"/><path d="M45 95 Q50 90 55 95 Q50 110 45 95" fill="%23eab308"/></svg>`,
+  sucrerie_rouge: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 160" width="100%" height="100%"><rect width="100" height="160" rx="16" fill="%23240f12"/><path d="M42 12 h16 v22 h-16 Z" fill="%23dc2626"/><rect x="40" y="34" width="20" height="24" rx="4" fill="%23991b1b"/><path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="%23ef4444"/><rect x="28" y="80" width="44" height="40" rx="6" fill="%23b91c1c"/><circle cx="50" cy="100" r="12" fill="%23fee2e2"/><path d="M44 104 Q50 94 56 104" stroke="%23991b1b" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
+  eau_bleue: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 160" width="100%" height="100%"><rect width="100" height="160" rx="16" fill="%230c1b29"/><path d="M42 10 h16 v22 h-16 Z" fill="%230284c7"/><rect x="40" y="32" width="20" height="24" rx="4" fill="%230369a1"/><path d="M30 56 Q24 70 24 92 L24 138 Q24 148 36 148 L64 148 Q76 148 76 138 L76 92 Q76 70 70 56 Z" fill="%230ea5e9"/><rect x="28" y="80" width="44" height="38" rx="6" fill="%23bae6fd"/><circle cx="50" cy="99" r="11" fill="%23ffffff"/><path d="M50 92 C46 98 46 104 50 106 C54 104 54 98 50 92 Z" fill="%230284c7"/></svg>`,
+};
+
+// Produits de secours locaux si pas de réseau au premier lancement (100% visuel)
 const FALLBACK_PRODUCTS: Product[] = [
-  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Brakina', volume: '65cl', price: 900, current_stock: 120 },
-  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Sobebra', volume: '65cl', price: 1000, current_stock: 80 },
-  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Guinness', volume: '33cl', price: 1200, current_stock: 15 },
-  { id: 'c0000000-0000-0000-0000-000000000004', name: 'Laafi (Eau)', volume: '1.5L', price: 500, current_stock: 4 },
+  {
+    id: 'c0000000-0000-0000-0000-000000000001',
+    name: 'Brakina',
+    volume: '65cl',
+    price: 900,
+    current_stock: 120,
+    category: 'Bière',
+    imageUrl: DEFAULT_BOTTLE_IMAGES.biere_ambre,
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000002',
+    name: 'Beaufort',
+    volume: '65cl',
+    price: 1000,
+    current_stock: 80,
+    category: 'Bière',
+    imageUrl: DEFAULT_BOTTLE_IMAGES.biere_verte,
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000003',
+    name: 'Guinness',
+    volume: '33cl',
+    price: 1200,
+    current_stock: 15,
+    category: 'Bière',
+    imageUrl: DEFAULT_BOTTLE_IMAGES.stout_noire,
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000004',
+    name: 'Coca-Cola',
+    volume: '33cl',
+    price: 700,
+    current_stock: 65,
+    category: 'Sucrerie',
+    imageUrl: DEFAULT_BOTTLE_IMAGES.sucrerie_rouge,
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000005',
+    name: 'Eau Laafi',
+    volume: '1.5L',
+    price: 500,
+    current_stock: 35,
+    category: 'Eau',
+    imageUrl: DEFAULT_BOTTLE_IMAGES.eau_bleue,
+  },
 ];
 
 export const posService = {
@@ -160,13 +212,15 @@ export const posService = {
         }
         const { data, error } = await query;
         if (!error && data && data.length > 0) {
-          const mapped = data.map(p => ({
+          const mapped: Product[] = data.map(p => ({
             id: p.id,
             establishment_id: p.establishment_id,
             name: p.name,
             volume: p.volume,
             price: Number(p.price),
             current_stock: p.current_stock,
+            category: p.category || (p.name.toLowerCase().includes('eau') ? 'Eau' : p.name.toLowerCase().includes('coca') || p.name.toLowerCase().includes('fanta') || p.name.toLowerCase().includes('sucr') ? 'Sucrerie' : 'Bière'),
+            imageUrl: p.imageUrl || p.image_base64 || DEFAULT_BOTTLE_IMAGES.biere_ambre,
           }));
           await safeStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(mapped));
           return mapped;
@@ -179,10 +233,73 @@ export const posService = {
     // Récupération depuis le cache local safeStorage
     const cached = await safeStorage.getItem(STORAGE_KEYS.CACHED_PRODUCTS);
     if (cached) {
-      return JSON.parse(cached);
+      try {
+        const parsed: Product[] = JSON.parse(cached);
+        if (parsed && parsed.length > 0) return parsed;
+      } catch (e) {}
     }
 
+    await safeStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(FALLBACK_PRODUCTS));
     return FALLBACK_PRODUCTS;
+  },
+
+  /**
+   * Ajoute une nouvelle boisson par le Gérant (avec photo prise par la caméra ou galerie)
+   */
+  async addProduct(product: Omit<Product, 'id'>): Promise<Product> {
+    const newProd: Product = {
+      id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      ...product,
+      category: product.category || 'Bière',
+      imageUrl: product.imageUrl || DEFAULT_BOTTLE_IMAGES.biere_ambre,
+    };
+
+    // 1. Sauvegarde dans le cache local hors-ligne
+    const existing = await this.getProducts();
+    const updated = [newProd, ...existing];
+    await safeStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(updated));
+
+    // 2. Synchronisation Supabase / Backend si connecté
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from('products').insert({
+          id: newProd.id,
+          name: newProd.name,
+          volume: newProd.volume,
+          price: newProd.price,
+          category: newProd.category,
+          initial_stock: newProd.current_stock,
+          current_stock: newProd.current_stock,
+          image_base64: newProd.imageUrl,
+          establishment_id: newProd.establishment_id,
+        });
+      } catch (e) {
+        console.warn('Erreur synchronisation produit Supabase (gardé en local):', e);
+      }
+    }
+
+    return newProd;
+  },
+
+  /**
+   * Met à jour une boisson (prix, stock ou photo)
+   */
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
+    const existing = await this.getProducts();
+    let updatedItem: Product | null = null;
+    const updated = existing.map(p => {
+      if (p.id === id) {
+        updatedItem = { ...p, ...updates };
+        return updatedItem;
+      }
+      return p;
+    });
+
+    if (updatedItem) {
+      await safeStorage.setItem(STORAGE_KEYS.CACHED_PRODUCTS, JSON.stringify(updated));
+      return updatedItem;
+    }
+    throw new Error('Boisson introuvable');
   },
 
   // --- PRISE DE COMMANDE & GESTION HORS-LIGNE ---

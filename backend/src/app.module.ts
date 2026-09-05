@@ -4,9 +4,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { Subscription } from './subscriptions/entities/subscription.entity';
 import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 import { User } from './auth/entities/user.entity';
 import { Establishment } from './auth/entities/establishment.entity';
-import { InventoryController } from './inventory/inventory.controller';
+import { InventoryModule } from './inventory/inventory.module';
+import { Product } from './inventory/entities/product.entity';
+import { StaffModule } from './staff/staff.module';
 import { OrdersController } from './orders/orders.controller';
 
 @Module({
@@ -31,7 +34,7 @@ import { OrdersController } from './orders/orders.controller';
             username: config.get<string>('DB_USER', 'postgres'),
             password: dbPassword,
             database: config.get<string>('DB_NAME', 'postgres'),
-            entities: [Subscription, User, Establishment],
+            entities: [Subscription, User, Establishment, Product],
             synchronize: false,
             ssl: { rejectUnauthorized: false },
           };
@@ -41,7 +44,7 @@ import { OrdersController } from './orders/orders.controller';
           type: 'sqljs',
           location: './subscriptions.sqlite',
           autoSave: true,
-          entities: [Subscription, User, Establishment],
+          entities: [Subscription, User, Establishment, Product],
           synchronize: true,
           logging: false,
         };
@@ -49,7 +52,10 @@ import { OrdersController } from './orders/orders.controller';
     }),
     SubscriptionsModule,
     AuthModule,
+    AdminModule,
+    InventoryModule,
+    StaffModule,
   ],
-  controllers: [InventoryController, OrdersController],
+  controllers: [OrdersController],
 })
 export class AppModule {}
