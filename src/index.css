@@ -842,26 +842,116 @@ body {
   box-shadow: 0 0 8px var(--primary);
 }
 
-/* Responsive grid layouts */
+/* =====================================================
+   RESPONSIVE - MOBILE FIRST
+   ===================================================== */
+
+/* --- Tablette portrait (≤ 768px) --- */
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+  .hero-section {
+    padding: clamp(40px, 8vw, 72px) 0 40px;
+  }
   .hero-title {
-    font-size: 40px;
-    letter-spacing: -1px;
+    font-size: clamp(28px, 7vw, 40px);
+    letter-spacing: -0.5px;
   }
   .hero-desc {
-    font-size: 16px;
+    font-size: clamp(14px, 3.5vw, 16px);
   }
   .site-header {
     padding: 12px 0;
   }
   .nav-menu {
-    display: none; /* simple stack sidebar or hide for LP */
+    display: none;
   }
   .hero-actions {
     flex-direction: column;
-    padding: 0 32px;
+    align-items: stretch;
+    padding: 0 24px;
+    gap: 12px;
+  }
+  .hero-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+  .section-title {
+    font-size: clamp(24px, 6vw, 32px);
+  }
+  .glass-card {
+    padding: 20px 16px;
   }
 }
+
+/* --- Mobile téléphone (≤ 480px) --- */
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: clamp(22px, 8vw, 32px);
+  }
+  .hero-actions {
+    padding: 0 8px;
+  }
+  .demo-grid {
+    gap: 24px;
+  }
+  .selector-btn {
+    padding: 16px 12px;
+    gap: 12px;
+  }
+  .selector-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+  .selector-info h3 {
+    font-size: 15px;
+    white-space: normal;
+    min-width: 0;
+  }
+}
+
+/* --- Support rotation paysage sur mobile (hauteur réduite) --- */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero-section {
+    padding: 24px 0 20px;
+  }
+  .hero-title {
+    font-size: clamp(20px, 5vw, 32px);
+    margin-bottom: 12px;
+  }
+  .hero-desc {
+    margin-bottom: 20px;
+  }
+  .hero-actions {
+    margin-bottom: 24px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 16px;
+  }
+  .features-section,
+  .demo-section,
+  .pricing-section {
+    padding: 40px 0;
+  }
+  .device-frame {
+    max-height: 280px;
+  }
+  .device-container {
+    max-width: 300px;
+  }
+}
+
+
 
 /* New simulator styles for multi-role, 2-step checkout, offline images, and limits */
 .product-image-container {
