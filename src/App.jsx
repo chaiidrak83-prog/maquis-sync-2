@@ -65,7 +65,28 @@ import SimplifiedDashboard from './components/SimplifiedDashboard';
 
 export default function App() {
   // --- Simulation & Database Global States ---
-  const [viewMode, setViewMode] = useState('LANDING'); // 'LANDING' | 'MOBILE_POS' | 'SUPER_ADMIN' | 'BOSS_ADMIN'
+  // --- Routing & View States ---
+  // Route "/" : obligatoirement Landing Page
+  // Route "/app" : application Maquis Sync (caisse, stock, serveurs)
+  // Route "/boss-admin" : console admin
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window === 'undefined') return 'LANDING';
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    const host = window.location.hostname.toLowerCase();
+    const isSubdomain = host.startsWith('app.') || host.startsWith('pos.') || host.startsWith('caisse.') || host.startsWith('pwa.');
+
+    if (path === '/boss-admin' || hash === '#boss-admin' || hash === '#/boss-admin') {
+      return 'BOSS_ADMIN';
+    }
+    // Route /app ou sous-domaine dédié -> Application Maquis Sync
+    if (path === '/app' || path.startsWith('/app/') || hash === '#app' || hash === '#pos' || isSubdomain) {
+      return 'MOBILE_POS';
+    }
+    // Route racine "/" -> OBLIGATOIREMENT LANDING PAGE
+    return 'LANDING';
+  });
+
   const [establishmentId, setEstablishmentId] = useState('a0000000-0000-0000-0000-000000000001');
   const [supabaseActive, setSupabaseActive] = useState(isSupabaseConfigured());
   const [isDbLoading, setIsDbLoading] = useState(false);
@@ -84,33 +105,59 @@ export default function App() {
     const host = window.location.hostname.toLowerCase();
     const isSubdomain = host.startsWith('app.') || host.startsWith('pos.') || host.startsWith('caisse.') || host.startsWith('pwa.');
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator?.standalone === true;
-    return search.get('source') === 'pwa' || isStandalone || isSubdomain;
+    return isStandalone || isSubdomain || search.get('source') === 'pwa';
   });
 
-  // Écoute de l'URL cachée #boss-admin ou lancement direct PWA autonome
+  // Écoute de l'historique et des changements de route (popstate, hashchange)
   useEffect(() => {
     const handleUrlCheck = () => {
-      const hash = window.location.hash;
-      const path = window.location.pathname;
-      const search = new URLSearchParams(window.location.search);
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
       const host = window.location.hostname.toLowerCase();
+      const search = new URLSearchParams(window.location.search);
       const isSubdomain = host.startsWith('app.') || host.startsWith('pos.') || host.startsWith('caisse.') || host.startsWith('pwa.');
-      const isPwa = search.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches || window.navigator?.standalone === true || isSubdomain;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator?.standalone === true;
 
-      if (isPwa) {
+      if (isStandalone || isSubdomain || search.get('source') === 'pwa') {
         setIsStandaloneApp(true);
       }
 
-      if (hash === '#boss-admin' || hash === '#/boss-admin' || path === '/boss-admin') {
+      if (path === '/boss-admin' || hash === '#boss-admin' || hash === '#/boss-admin') {
         setViewMode('BOSS_ADMIN');
-      } else if (isPwa || hash === '#pos' || hash === '#app') {
+      } else if (path === '/app' || path.startsWith('/app/') || hash === '#app' || hash === '#pos' || isSubdomain) {
         setViewMode('MOBILE_POS');
+      } else {
+        // La route racine "/" doit afficher obligatoirement la Landing Page
+        setViewMode('LANDING');
       }
     };
+
     handleUrlCheck();
+    window.addEventListener('popstate', handleUrlCheck);
     window.addEventListener('hashchange', handleUrlCheck);
-    return () => window.removeEventListener('hashchange', handleUrlCheck);
+    return () => {
+      window.removeEventListener('popstate', handleUrlCheck);
+      window.removeEventListener('hashchange', handleUrlCheck);
+    };
   }, []);
+
+  // Navigation fluide SPA vers /app
+  const navigateToApp = () => {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/app') {
+      window.history.pushState({}, '', '/app');
+    }
+    setViewMode('MOBILE_POS');
+    window.scrollTo(0, 0);
+  };
+
+  // Navigation fluide SPA vers la Landing Page /
+  const navigateToLanding = () => {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+    }
+    setViewMode('LANDING');
+    window.scrollTo(0, 0);
+  };
 
   // Geste secret : 5 clics rapides sur le logo en moins de 2 secondes
   const handleSecretLogoTrigger = () => {
@@ -119,7 +166,9 @@ export default function App() {
     setSecretWebTaps(recent);
     if (recent.length >= 5) {
       setSecretWebTaps([]);
-      window.location.hash = 'boss-admin';
+      if (typeof window !== 'undefined' && window.location.pathname !== '/boss-admin') {
+        window.history.pushState({}, '', '/boss-admin');
+      }
       setViewMode('BOSS_ADMIN');
     }
   };
@@ -1127,11 +1176,11 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <PwaInstallButton 
                 variant="navbar" 
-                onLaunchApp={() => setViewMode('MOBILE_POS')} 
+                onLaunchApp={navigateToApp} 
               />
               {viewMode === 'MOBILE_POS' ? (
                 <button
-                  onClick={() => setViewMode('LANDING')}
+                  onClick={navigateToLanding}
                   className="btn btn-secondary"
                   style={{
                     padding: '8px 16px',
@@ -1178,7 +1227,7 @@ export default function App() {
           }}
           onCancel={() => {
             window.location.hash = '';
-            setViewMode('LANDING');
+            navigateToLanding();
           }}
         />
       )}
@@ -1188,11 +1237,11 @@ export default function App() {
         <SuperAdminConsole
           onExit={() => {
             window.location.hash = '';
-            setViewMode('LANDING');
+            navigateToLanding();
           }}
           onImpersonate={(est) => {
             setImpersonatedEstablishment(est);
-            setViewMode('MOBILE_POS');
+            navigateToApp();
             setLoggedInUserId('u1');
           }}
         />
@@ -1215,7 +1264,7 @@ export default function App() {
           <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <PwaInstallButton 
               variant="hero" 
-              onLaunchApp={() => setViewMode('MOBILE_POS')} 
+              onLaunchApp={navigateToApp} 
             />
             <button 
               onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
@@ -1348,12 +1397,12 @@ export default function App() {
       {viewMode !== 'SUPER_ADMIN' && (
         <section 
           id="demo" 
-          className={`demo-section ${(viewMode === 'MOBILE_POS' || isStandaloneApp) ? 'app-mode-active' : ''}`} 
-          style={(viewMode === 'MOBILE_POS' || isStandaloneApp) ? { padding: 0, border: 'none', background: 'transparent' } : {}}
+          className={`demo-section ${(viewMode === 'MOBILE_POS') ? 'app-mode-active' : ''}`} 
+          style={(viewMode === 'MOBILE_POS') ? { padding: 0, border: 'none', background: 'transparent' } : {}}
         >
-        <div className={(viewMode === 'MOBILE_POS' || isStandaloneApp) ? 'container-app' : 'container'}>
+        <div className={(viewMode === 'MOBILE_POS') ? 'container-app' : 'container'}>
           {/* Header ONLY in desktop LANDING mode preview */}
-          {viewMode === 'LANDING' && !isStandaloneApp && (
+          {viewMode === 'LANDING' && (
             <div className="section-header">
               <h2 className="section-title">Application Mobile <span>Tout-en-Un</span></h2>
               <p className="section-subtitle">
@@ -1362,9 +1411,9 @@ export default function App() {
             </div>
           )}
 
-          <div className={(viewMode === 'MOBILE_POS' || isStandaloneApp) ? 'app-standalone-container' : 'demo-grid'}>
-            {/* Left: Test credentials and simulation helper - ONLY in desktop marketing LANDING mode, HIDDEN when app is downloaded/installed */}
-            {viewMode === 'LANDING' && !isStandaloneApp && (
+          <div className={(viewMode === 'MOBILE_POS') ? 'app-standalone-container' : 'demo-grid'}>
+            {/* Left: Test credentials and simulation helper - ONLY in desktop marketing LANDING mode */}
+            {viewMode === 'LANDING' && (
               <div className="simulation-guide-col" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ margin: '0 0 16px 0', fontFamily: 'var(--font-heading)', color: 'var(--primary)', fontSize: '20px' }}>Comptes de Démonstration</h3>
@@ -3389,7 +3438,7 @@ export default function App() {
         onClose={() => setShowOnboardingModal(false)}
         onActivated={({ nomMaquis, phone, plan }) => {
           setLoggedInUserId('u1');
-          setViewMode('MOBILE_POS');
+          navigateToApp();
         }}
       />
 

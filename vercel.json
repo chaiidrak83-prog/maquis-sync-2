@@ -1,16 +1,6 @@
 {
   "rewrites": [
     {
-      "has": [
-        {
-          "type": "host",
-          "value": "(app|pos|caisse|pwa)\\..*"
-        }
-      ],
-      "source": "/(.*)",
-      "destination": "/index.html?source=pwa"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

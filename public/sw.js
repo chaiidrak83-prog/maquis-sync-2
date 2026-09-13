@@ -1,7 +1,8 @@
 // MaquisSync Offline-First Service Worker
-const CACHE_NAME = 'maquissync-v1';
+const CACHE_NAME = 'maquissync-v2';
 const STATIC_ASSETS = [
   '/',
+  '/app',
   '/index.html',
   '/manifest.json',
   '/icons/icon.svg',

@@ -54,42 +54,30 @@ export default function PwaInstallButton({
   }, []);
 
   const handleInstallClick = async () => {
-    // If already installed, launch the app directly
-    if (isInstalled) {
-      if (onLaunchApp) {
-        onLaunchApp();
-      } else {
-        window.location.href = '/?source=pwa#pos';
-      }
-      return;
-    }
-
-    // If iOS Safari, show step-by-step modal guide
-    if (isIOS) {
-      setShowIOSModal(true);
-      return;
-    }
-
-    // If deferredPrompt is available (Android / Chrome)
+    // 1. Déclenche l'invite d'installation PWA si disponible via 'beforeinstallprompt'
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setIsInstalled(true);
-        if (onLaunchApp) {
-          setTimeout(() => onLaunchApp(), 500);
+      try {
+        await deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        if (choiceResult && choiceResult.outcome === 'accepted') {
+          setIsInstalled(true);
         }
+      } catch (err) {
+        console.warn('Erreur prompt installation PWA:', err);
       }
       setDeferredPrompt(null);
-    } else {
-      // Fallback: If clicked on unsupported desktop browser or prompt not ready
-      if (onLaunchApp) {
-        onLaunchApp();
-      } else {
-        const demoSection = document.getElementById('demo');
-        if (demoSection) {
-          demoSection.scrollIntoView({ behavior: 'smooth' });
-        }
+    } else if (isIOS && !isInstalled) {
+      // Guide pas-à-pas pour Safari iOS
+      setShowIOSModal(true);
+    }
+
+    // 2. Redirige l'utilisateur directement vers "/app" pour arriver dans l'application
+    if (onLaunchApp) {
+      onLaunchApp();
+    } else if (typeof window !== 'undefined') {
+      if (window.location.pathname !== '/app') {
+        window.history.pushState({}, '', '/app');
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
     }
   };
@@ -234,7 +222,15 @@ export default function PwaInstallButton({
             </div>
 
             <button
-              onClick={() => setShowIOSModal(false)}
+              onClick={() => {
+                setShowIOSModal(false);
+                if (onLaunchApp) {
+                  onLaunchApp();
+                } else if (typeof window !== 'undefined' && window.location.pathname !== '/app') {
+                  window.history.pushState({}, '', '/app');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+              }}
               className="btn btn-primary"
               style={{
                 width: '100%',
@@ -244,7 +240,7 @@ export default function PwaInstallButton({
                 fontSize: '14px'
               }}
             >
-              C'est compris !
+              Accéder à l'application (/app) ➔
             </button>
           </div>
         </div>
