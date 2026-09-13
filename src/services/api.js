@@ -73,6 +73,23 @@ export const establishmentService = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async updateGpsCoordinates(id, { latitude, longitude, geofence_radius_meters = 10 }) {
+    if (!isSupabaseConfigured()) return null;
+    const { data, error } = await supabase
+      .from('establishments')
+      .update({ 
+        latitude, 
+        longitude, 
+        geofence_radius_meters,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 };
 
@@ -93,6 +110,80 @@ export const productService = {
     const { data, error } = await supabase
       .from('products')
       .update({ current_stock: currentStock })
+      .eq('id', productId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async uploadImage(file, establishmentId) {
+    if (!isSupabaseConfigured() || !file) return null;
+    try {
+      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
+      const fileName = `${establishmentId || 'common'}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+      if (error) {
+        console.warn('Storage upload warning (fallback Base64 actif):', error.message);
+        return null;
+      }
+      const { data: publicUrlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(data.path);
+      return publicUrlData?.publicUrl || null;
+    } catch (e) {
+      console.warn('Upload image exception:', e);
+      return null;
+    }
+  },
+
+  async createProduct({ establishmentId, name, volume = '65cl', price, initialStock = 0, category = 'BEER', imageBase64 = null, imageFile = null }) {
+    let imageUrl = null;
+    if (imageFile) {
+      imageUrl = await this.uploadImage(imageFile, establishmentId);
+    }
+    if (!isSupabaseConfigured()) {
+      return {
+        id: 'p_' + Date.now(),
+        establishment_id: establishmentId,
+        name,
+        volume,
+        price: Number(price),
+        initial_stock: Number(initialStock),
+        current_stock: Number(initialStock),
+        category,
+        image_url: imageUrl,
+        image_base64: imageBase64,
+        is_active: true
+      };
+    }
+    const { data, error } = await supabase
+      .from('products')
+      .insert({
+        establishment_id: establishmentId,
+        name,
+        volume,
+        price: Number(price),
+        initial_stock: Number(initialStock),
+        current_stock: Number(initialStock),
+        category,
+        image_url: imageUrl,
+        image_base64: imageBase64,
+        is_active: true
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteProduct(productId) {
+    if (!isSupabaseConfigured()) return null;
+    const { data, error } = await supabase
+      .from('products')
+      .update({ is_active: false })
       .eq('id', productId)
       .select()
       .single();
@@ -200,6 +291,31 @@ export const salesService = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async getByDate(establishmentId, dateString) {
+    if (!isSupabaseConfigured()) return [];
+    // dateString format YYYY-MM-DD
+    const startOfDay = `${dateString}T00:00:00.000Z`;
+    const endOfDay = `${dateString}T23:59:59.999Z`;
+
+    let query = supabase
+      .from('sales')
+      .select('*, users(name), sale_items(*, products(name, volume, category, price, image_url, image_base64))')
+      .gte('created_at', startOfDay)
+      .lte('created_at', endOfDay)
+      .order('created_at', { ascending: false });
+
+    if (establishmentId) {
+      query = query.eq('establishment_id', establishmentId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('Supabase sales getByDate error:', error);
+      return [];
+    }
+    return data || [];
   }
 };
 
@@ -350,5 +466,29 @@ export const orderAuditService = {
       .single();
     if (error) console.warn('Supabase order_audit_logs insert error:', error);
     return data;
+  },
+
+  async getByDate(establishmentId, dateString) {
+    if (!isSupabaseConfigured()) return [];
+    const startOfDay = `${dateString}T00:00:00.000Z`;
+    const endOfDay = `${dateString}T23:59:59.999Z`;
+
+    let query = supabase
+      .from('order_audit_logs')
+      .select('*')
+      .gte('created_at', startOfDay)
+      .lte('created_at', endOfDay)
+      .order('created_at', { ascending: false });
+
+    if (establishmentId) {
+      query = query.eq('establishment_id', establishmentId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('Supabase order_audit_logs getByDate error:', error);
+      return [];
+    }
+    return data || [];
   }
 };

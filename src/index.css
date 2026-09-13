@@ -81,7 +81,7 @@ body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d0d12;
+  background: #1e293b;
 }
 ::-webkit-scrollbar-thumb {
   background: #272730;
@@ -128,7 +128,7 @@ body {
 
 .btn-primary {
   background-color: var(--primary);
-  color: #0d0d12;
+  color: #ffffff;
   box-shadow: 0 4px 14px 0 rgba(217, 160, 91, 0.3);
 }
 .btn-primary:hover {
@@ -601,7 +601,7 @@ body {
   text-align: center;
 }
 .ussd-syntax {
-  background: #0d0d12;
+  background: #1e293b;
   border-radius: 8px;
   padding: 12px;
   font-family: var(--mono);

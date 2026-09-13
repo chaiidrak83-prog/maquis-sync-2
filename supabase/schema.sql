@@ -14,9 +14,17 @@ CREATE TABLE IF NOT EXISTS public.establishments (
     subscription_status VARCHAR(50) DEFAULT 'trial' NOT NULL CHECK (subscription_status IN ('trial', 'active', 'expired')),
     subscription_expires_at TIMESTAMP WITH TIME ZONE,
     ussd_template VARCHAR(255) DEFAULT '*144*4*2*[MONTANT]*[NUMERO_CLIENT]#' NOT NULL,
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    geofence_radius_meters INTEGER DEFAULT 10 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- Colonnes de compatibilité si la table existe déjà
+ALTER TABLE public.establishments ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 7);
+ALTER TABLE public.establishments ADD COLUMN IF NOT EXISTS longitude DECIMAL(10, 7);
+ALTER TABLE public.establishments ADD COLUMN IF NOT EXISTS geofence_radius_meters INTEGER DEFAULT 10;
 
 -- 3. TABLE: Utilisateurs (Propriétaires, Gérants, Serveuses)
 CREATE TABLE IF NOT EXISTS public.users (
@@ -45,11 +53,17 @@ CREATE TABLE IF NOT EXISTS public.products (
     price DECIMAL(10, 2) NOT NULL,
     initial_stock INTEGER DEFAULT 0 NOT NULL,
     current_stock INTEGER DEFAULT 0 NOT NULL,
+    category VARCHAR(50) DEFAULT 'BEER' NOT NULL CHECK (category IN ('BEER', 'SODA', 'WINE_LIQUOR', 'DISH', 'WATER')),
+    image_url TEXT, -- URL de stockage Supabase (product-images bucket)
     image_base64 TEXT, -- Image SVG ou data URL pour le cache hors-ligne
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- Colonnes de compatibilité si la table existe déjà
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'BEER';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_products_establishment ON public.products(establishment_id);
 
@@ -219,10 +233,22 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
 
     -- Insertion Produits démo
-    INSERT INTO public.products (id, establishment_id, name, volume, price, initial_stock, current_stock, is_active) VALUES
-    ('c0000000-0000-0000-0000-000000000001', est_id, 'Brakina', '65cl', 900, 120, 120, true),
-    ('c0000000-0000-0000-0000-000000000002', est_id, 'Sobebra', '65cl', 1000, 80, 80, true),
-    ('c0000000-0000-0000-0000-000000000003', est_id, 'Guinness', '33cl', 1200, 15, 15, true),
-    ('c0000000-0000-0000-0000-000000000004', est_id, 'Laafi (Eau)', '1.5L', 500, 4, 4, true)
+    INSERT INTO public.products (id, establishment_id, name, volume, price, initial_stock, current_stock, category, is_active) VALUES
+    ('c0000000-0000-0000-0000-000000000001', est_id, 'Brakina', '65cl', 900, 120, 120, 'BEER', true),
+    ('c0000000-0000-0000-0000-000000000002', est_id, 'Sobebra', '65cl', 1000, 80, 80, 'BEER', true),
+    ('c0000000-0000-0000-0000-000000000003', est_id, 'Guinness', '33cl', 1200, 15, 15, 'BEER', true),
+    ('c0000000-0000-0000-0000-000000000004', est_id, 'Laafi (Eau)', '1.5L', 500, 4, 4, 'WATER', true)
     ON CONFLICT (id) DO NOTHING;
 END $$;
+
+-- 13. STORAGE BUCKET: Images de produits
+DO $$
+BEGIN
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('product-images', 'product-images', true)
+    ON CONFLICT (id) DO UPDATE SET public = true;
+EXCEPTION WHEN OTHERS THEN
+    -- Ignorer si l'extension storage n'est pas activée sur cette instance
+    NULL;
+END $$;
+

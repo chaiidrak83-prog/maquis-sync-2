@@ -223,7 +223,7 @@ export default function OwnerQrGeneratorModal({
                 className="input-field"
                 value={tableLabel}
                 onChange={(e) => setTableLabel(e.target.value)}
-                style={{ flex: 1, padding: '8px 12px', fontSize: '12px', background: '#0a0a0f' }}
+                style={{ flex: 1, padding: '8px 12px', fontSize: '12px', background: '#1e293b' }}
               >
                 <option value="Comptoir Caisse">Comptoir Caisse</option>
                 <option value="Table 1">Table 1</option>

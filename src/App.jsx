@@ -62,6 +62,7 @@ import VisualCatalogPos from './components/VisualCatalogPos';
 import OrderEditModal from './components/OrderEditModal';
 import OwnerQrGeneratorModal from './components/OwnerQrGeneratorModal';
 import SimplifiedDashboard from './components/SimplifiedDashboard';
+import OwnerSalesCalendarModal from './components/OwnerSalesCalendarModal';
 
 export default function App() {
   // --- Simulation & Database Global States ---
@@ -304,6 +305,26 @@ export default function App() {
   const [newProductVolume, setNewProductVolume] = useState('65cl');
   const [newProductStock, setNewProductStock] = useState('');
   const [newProductImageKey, setNewProductImageKey] = useState('beer_gold');
+  const [newProductCategory, setNewProductCategory] = useState('BEER');
+  const [newProductPhotoFile, setNewProductPhotoFile] = useState(null);
+  const [newProductPhotoPreview, setNewProductPhotoPreview] = useState(null);
+  const [isUploadingProduct, setIsUploadingProduct] = useState(false);
+
+  // Modal Calendrier Ventes Propriétaire
+  const [showOwnerCalendarModal, setShowOwnerCalendarModal] = useState(false);
+
+  // Configuration Coordonnées GPS Établissement (Géofencing 10 mètres)
+  const [establishmentGps, setEstablishmentGps] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('maquis_gps_coords');
+      if (saved) {
+        try { return JSON.parse(saved); } catch(e){}
+      }
+    }
+    return { latitude: 12.3714, longitude: -1.5197, radius: 10 };
+  });
+  const [isGpsCalibrating, setIsGpsCalibrating] = useState(false);
+  const [gpsCalibrateMsg, setGpsCalibrateMsg] = useState('');
 
   // Manual stock adjustments
   const [adjustingProductId, setAdjustingProductId] = useState(null);
@@ -2049,7 +2070,7 @@ export default function App() {
                                     <input 
                                       type="text" 
                                       className="input-field" 
-                                      style={{ fontSize: '11px', padding: '6px', background: '#0a0a0f' }}
+                                      style={{ fontSize: '11px', padding: '6px', background: '#1e293b' }}
                                       value={ussdTemplate}
                                       onChange={(e) => setUssdTemplate(e.target.value)}
                                     />
@@ -2100,7 +2121,7 @@ export default function App() {
                                         <input 
                                           type="text" 
                                           className="input-field" 
-                                          style={{ fontSize: '11px', padding: '4px 6px', background: '#0a0a0f', flex: 1 }}
+                                          style={{ fontSize: '11px', padding: '4px 6px', background: '#1e293b', flex: 1 }}
                                           value={whatsappNumber}
                                           onChange={(e) => setWhatsappNumber(e.target.value)}
                                           placeholder="+226 65 61 34 72"
@@ -2584,78 +2605,212 @@ export default function App() {
 
                             {/* Tab CONTENT: Drinks Catalogue management */}
                             {gerantTab === 'catalogue' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '240px' }}>
-                                <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Nouveau Produit au Catalogue</h5>
-                                <form onSubmit={handleAddProduct} style={{ background: '#121217', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                                  <div className="input-group" style={{ marginBottom: '8px' }}>
-                                    <label className="input-label" style={{ fontSize: '9px' }}>Nom de boisson</label>
-                                    <input 
-                                      type="text" 
-                                      placeholder="ex: Beaufort" 
-                                      className="input-field" 
-                                      style={{ padding: '6px', fontSize: '11px' }}
-                                      value={newProductName}
-                                      onChange={(e) => setNewProductName(e.target.value)}
-                                      required
-                                    />
-                                  </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', maxHeight: '280px' }}>
+                                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '16px', border: '1px solid #334155' }}>
+                                  <h5 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 800, color: '#f97316', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Beer size={15} /> Nouvel Article au Catalogue
+                                  </h5>
+
+                                  <form onSubmit={handleAddProduct} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* 1. Sélection de la catégorie */}
+                                    <div>
+                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Catégorie de l'article</label>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
+                                        {[
+                                          { key: 'BEER', icon: '🍺', label: 'Bière' },
+                                          { key: 'SODA', icon: '🥤', label: 'Soda' },
+                                          { key: 'WINE_LIQUOR', icon: '🍷', label: 'Vin' },
+                                          { key: 'DISH', icon: '🍲', label: 'Plat' },
+                                          { key: 'WATER', icon: '💧', label: 'Eau' }
+                                        ].map(cat => (
+                                          <button
+                                            key={cat.key}
+                                            type="button"
+                                            onClick={() => setNewProductCategory(cat.key)}
+                                            style={{
+                                              padding: '6px 2px',
+                                              borderRadius: '8px',
+                                              border: newProductCategory === cat.key ? '2px solid #f97316' : '1px solid #475569',
+                                              background: newProductCategory === cat.key ? 'rgba(249, 115, 22, 0.25)' : '#0f172a',
+                                              color: '#ffffff',
+                                              fontSize: '10px',
+                                              fontWeight: 800,
+                                              display: 'flex',
+                                              flexDirection: 'column',
+                                              alignItems: 'center',
+                                              gap: '2px',
+                                              cursor: 'pointer'
+                                            }}
+                                          >
+                                            <span>{cat.icon}</span>
+                                            <span>{cat.label}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* 2. Prise de vue / Sélection photo directe */}
+                                    <div>
+                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Photo de l'article</label>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        id="manager-photo-upload"
+                                        onChange={handlePhotoSelected}
+                                        style={{ display: 'none' }}
+                                      />
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => document.getElementById('manager-photo-upload')?.click()}
+                                          style={{
+                                            flex: 1,
+                                            padding: '10px',
+                                            borderRadius: '10px',
+                                            border: '2px dashed #475569',
+                                            background: '#0f172a',
+                                            color: '#cbd5e1',
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            cursor: 'pointer'
+                                          }}
+                                        >
+                                          <span>📷</span>
+                                          <span>{newProductPhotoFile ? 'Changer la photo' : 'Prendre photo / Galerie'}</span>
+                                        </button>
+
+                                        {newProductPhotoPreview && (
+                                          <div style={{ position: 'relative', width: '42px', height: '42px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #10b981', flexShrink: 0 }}>
+                                            <img src={newProductPhotoPreview} alt="Aperçu" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <button
+                                              type="button"
+                                              onClick={() => { setNewProductPhotoFile(null); setNewProductPhotoPreview(null); }}
+                                              style={{ position: 'absolute', top: 0, right: 0, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '0 0 0 4px', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 3. Nom de l'article */}
                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                      <label className="input-label" style={{ fontSize: '9px' }}>Prix (FCFA)</label>
+                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Nom de l'article</label>
                                       <input 
-                                        type="number" 
-                                        placeholder="1000" 
+                                        type="text" 
+                                        placeholder="ex: Beaufort, Poulet braisé, Coca..." 
                                         className="input-field" 
-                                        style={{ padding: '6px', fontSize: '11px' }}
-                                        value={newProductPrice}
-                                        onChange={(e) => setNewProductPrice(e.target.value)}
+                                        style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
+                                        value={newProductName}
+                                        onChange={(e) => setNewProductName(e.target.value)}
                                         required
                                       />
                                     </div>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                      <label className="input-label" style={{ fontSize: '9px' }}>Volume</label>
-                                      <select 
-                                        className="input-field" 
-                                        style={{ padding: '6px', fontSize: '11px' }}
-                                        value={newProductVolume}
-                                        onChange={(e) => setNewProductVolume(e.target.value)}
-                                      >
-                                        <option value="33cl">33cl</option>
-                                        <option value="65cl">65cl</option>
-                                        <option value="1.5L">1.5L</option>
-                                      </select>
+
+                                    {/* 4. Prix & Volume */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                      <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Prix (FCFA)</label>
+                                        <input 
+                                          type="number" 
+                                          placeholder="1000" 
+                                          className="input-field" 
+                                          style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
+                                          value={newProductPrice}
+                                          onChange={(e) => setNewProductPrice(e.target.value)}
+                                          required
+                                        />
+                                      </div>
+                                      <div className="input-group" style={{ marginBottom: 0 }}>
+                                        <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Volume / Format</label>
+                                        <select 
+                                          className="input-field" 
+                                          style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
+                                          value={newProductVolume}
+                                          onChange={(e) => setNewProductVolume(e.target.value)}
+                                        >
+                                          <option value="33cl">33cl</option>
+                                          <option value="65cl">65cl</option>
+                                          <option value="1.5L">1.5L</option>
+                                          <option value="Portion">Portion / Plat</option>
+                                          <option value="Verre">Verre / Dose</option>
+                                        </select>
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+
+                                    {/* 5. Stock Initial */}
                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                      <label className="input-label" style={{ fontSize: '9px' }}>Stock Initial</label>
+                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Stock Initial (unités)</label>
                                       <input 
                                         type="number" 
                                         placeholder="50" 
                                         className="input-field" 
-                                        style={{ padding: '6px', fontSize: '11px' }}
+                                        style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
                                         value={newProductStock}
                                         onChange={(e) => setNewProductStock(e.target.value)}
                                         required
                                       />
                                     </div>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                      <label className="input-label" style={{ fontSize: '9px' }}>Image Cache</label>
-                                      <select 
-                                        className="input-field" 
-                                        style={{ padding: '6px', fontSize: '11px' }}
-                                        value={newProductImageKey}
-                                        onChange={(e) => setNewProductImageKey(e.target.value)}
-                                      >
-                                        <option value="beer_gold">Bière Blonde</option>
-                                        <option value="beer_green">Bière Brune/Verte</option>
-                                        <option value="stout_dark">Stout (Guinness)</option>
-                                        <option value="water_blue">Eau / Soda</option>
-                                      </select>
-                                    </div>
+
+                                    <button
+                                      type="submit"
+                                      disabled={isUploadingProduct}
+                                      className="btn btn-primary"
+                                      style={{ width: '100%', padding: '10px', fontSize: '12px', fontWeight: 800, marginTop: '4px' }}
+                                    >
+                                      {isUploadingProduct ? '⏳ Enregistrement & Upload...' : '✓ Ajouter et Synchroniser'}
+                                    </button>
+                                  </form>
+                                </div>
+
+                                {/* Liste récapitulative des articles du catalogue */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>
+                                    Articles en rayon ({products.filter(p => p.is_active).length})
                                   </div>
-                                  <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '8px', fontSize: '11px' }}>Ajouter et Synchroniser</button>
-                                </form>
+                                  {products.filter(p => p.is_active).map(prod => (
+                                    <div key={prod.id} style={{
+                                      background: '#1e293b',
+                                      border: '1px solid #334155',
+                                      borderRadius: '10px',
+                                      padding: '8px 10px',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center'
+                                    }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                          {prod.image_url || prod.image_base64 ? (
+                                            <img src={prod.image_url || prod.image_base64} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                          ) : (
+                                            <Beer size={14} style={{ color: '#f59e0b' }} />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <div style={{ fontWeight: 800, fontSize: '12px', color: '#ffffff' }}>{prod.name}</div>
+                                          <div style={{ fontSize: '10px', color: '#94a3b8' }}>{prod.price} F CFA ({prod.volume})</div>
+                                        </div>
+                                      </div>
+
+                                      <div style={{
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        padding: '2px 8px',
+                                        borderRadius: '6px',
+                                        background: prod.current_stock < 10 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                                        color: prod.current_stock < 10 ? '#ef4444' : '#10b981'
+                                      }}>
+                                        {prod.current_stock} restants
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
 
@@ -2941,7 +3096,7 @@ export default function App() {
                                     </div>
 
                                     {/* Brief cart contents review */}
-                                    <div style={{ flex: 1, background: '#121217', borderRadius: '8px', padding: '10px', marginBottom: '10px', overflowY: 'auto', maxHeight: '110px' }}>
+                                    <div style={{ flex: 1, background: '#1e293b', borderRadius: '8px', padding: '10px', marginBottom: '10px', overflowY: 'auto', maxHeight: '110px' }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px', marginBottom: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>
                                         <span>DÉTAIL COMMANDE</span>
                                         <span>TOTAL</span>

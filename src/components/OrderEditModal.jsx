@@ -17,11 +17,9 @@ export default function OrderEditModal({
   onCancelOrder,
   onClose
 }) {
-  if (!order) return null;
-
   // Clone des items de la commande
   const [items, setItems] = useState(() => {
-    if (order.items && order.items.length > 0) {
+    if (order?.items && order.items.length > 0) {
       return order.items.map(it => ({
         productId: it.productId || it.product_id,
         name: it.name || it.product_name || products.find(p => p.id === (it.productId || it.product_id))?.name || 'Boisson',
@@ -29,18 +27,17 @@ export default function OrderEditModal({
         quantity: it.quantity || 1
       }));
     }
-    // Si pas de détails articulés (ex: commande ancienne), créer un item générique avec le total
     return [
       {
         productId: products[0]?.id || 'p1',
         name: products[0]?.name || 'Article commande',
-        unitPrice: order.total_amount,
+        unitPrice: order?.total_amount || 0,
         quantity: 1
       }
     ];
   });
 
-  const [paymentMethod, setPaymentMethod] = useState(order.payment_method || 'CASH');
+  const [paymentMethod, setPaymentMethod] = useState(order?.payment_method || 'CASH');
   const [selectedReason, setSelectedReason] = useState(COMMON_REASONS[0]);
   const [customReason, setCustomReason] = useState('');
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
@@ -51,7 +48,9 @@ export default function OrderEditModal({
     return items.reduce((sum, it) => sum + (it.unitPrice * it.quantity), 0);
   }, [items]);
 
-  const totalDelta = newTotal - (order.total_amount || 0);
+  const totalDelta = newTotal - (order?.total_amount || 0);
+
+  if (!order) return null;
 
   // Modification quantité
   const handleQtyChange = (productId, delta) => {
@@ -345,7 +344,7 @@ export default function OrderEditModal({
                   e.target.value = '';
                 }
               }}
-              style={{ padding: '6px 10px', fontSize: '12px', background: '#0a0a0f', borderColor: 'rgba(255,255,255,0.1)' }}
+              style={{ padding: '6px 10px', fontSize: '12px', background: '#1e293b', borderColor: 'rgba(255,255,255,0.1)' }}
             >
               <option value="" disabled>+ Choisir une boisson du catalogue...</option>
               {products.map(p => (
@@ -437,7 +436,7 @@ export default function OrderEditModal({
               className="input-field"
               value={customReason}
               onChange={(e) => setCustomReason(e.target.value)}
-              style={{ fontSize: '12px', padding: '6px 10px', background: '#0a0a0f' }}
+              style={{ fontSize: '12px', padding: '6px 10px', background: '#1e293b' }}
             />
           </div>
 

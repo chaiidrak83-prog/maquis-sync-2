@@ -430,7 +430,7 @@ export default function WebQrScanner({ onScan, onClose, title = "Scanner QR Code
                 flex: 1,
                 padding: '8px 12px',
                 fontSize: '13px',
-                background: '#0a0a0f',
+                background: '#1e293b',
                 borderColor: 'rgba(255,255,255,0.15)'
               }}
               autoFocus

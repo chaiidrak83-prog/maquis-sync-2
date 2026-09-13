@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Minus, Trash2, Check, ArrowRight, DollarSign, Smartphone } from 'lucide-react';
+import { Plus, Minus, Trash2, DollarSign, Smartphone } from 'lucide-react';
 
-// Bouteilles vectorielles haute définition pour la caisse visuelle
-const BOTTLE_SVG_PRESETS = {
+// Bouteilles et illustrations vectorielles haute définition pour la caisse visuelle
+const PRESET_SVGS = {
   biere_blonde: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1f1408" />
+      <rect width="100" height="160" rx="16" fill="#1e293b" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#d97706" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#b45309" />
       <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#f59e0b" />
@@ -16,7 +16,7 @@ const BOTTLE_SVG_PRESETS = {
   ),
   biere_verte: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#0b1a13" />
+      <rect width="100" height="160" rx="16" fill="#1e293b" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#059669" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#047857" />
       <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#10b981" />
@@ -27,18 +27,18 @@ const BOTTLE_SVG_PRESETS = {
   ),
   stout_dark: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#141110" />
+      <rect width="100" height="160" rx="16" fill="#1e293b" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#451a03" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#27150a" />
-      <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#292524" />
+      <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#334155" />
       <rect x="28" y="78" width="44" height="44" rx="6" fill="#ca8a04" />
-      <circle cx="50" cy="100" r="13" fill="#000000" />
+      <circle cx="50" cy="100" r="13" fill="#0f172a" />
       <path d="M45 95 Q50 90 55 95 Q50 110 45 95" fill="#eab308" />
     </svg>
   ),
   sucrerie_rouge: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#210a0d" />
+      <rect width="100" height="160" rx="16" fill="#1e293b" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#dc2626" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#991b1b" />
       <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#ef4444" />
@@ -49,7 +49,7 @@ const BOTTLE_SVG_PRESETS = {
   ),
   eau_bleue: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#081624" />
+      <rect width="100" height="160" rx="16" fill="#1e293b" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#0284c7" />
       <rect x="40" y="32" width="20" height="24" rx="4" fill="#0369a1" />
       <path d="M30 56 Q24 70 24 92 L24 138 Q24 148 36 148 L64 148 Q76 148 76 138 L76 92 Q76 70 70 56 Z" fill="#0ea5e9" />
@@ -58,6 +58,28 @@ const BOTTLE_SVG_PRESETS = {
       <path d="M50 92 C46 98 46 104 50 106 C54 104 54 98 50 92 Z" fill="#0284c7" />
     </svg>
   ),
+  vin_liqueur: (
+    <svg viewBox="0 0 100 160" width="100%" height="100%">
+      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <path d="M44 8 h12 v30 h-12 Z" fill="#831843" />
+      <rect x="42" y="38" width="16" height="14" rx="2" fill="#be185d" />
+      <path d="M32 52 Q26 70 26 95 L26 140 Q26 148 36 148 L64 148 Q74 148 74 140 L74 95 Q74 70 68 52 Z" fill="#9d174d" />
+      <rect x="30" y="80" width="40" height="42" rx="4" fill="#fbcfe8" />
+      <circle cx="50" cy="101" r="10" fill="#831843" />
+    </svg>
+  ),
+  plat_grillade: (
+    <svg viewBox="0 0 100 160" width="100%" height="100%">
+      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <ellipse cx="50" cy="95" rx="42" ry="26" fill="#ea580c" />
+      <ellipse cx="50" cy="92" rx="36" ry="20" fill="#fed7aa" />
+      <ellipse cx="42" cy="90" rx="18" ry="10" fill="#c2410c" />
+      <circle cx="62" cy="90" r="8" fill="#16a34a" />
+      <circle cx="50" cy="98" r="6" fill="#dc2626" />
+      <path d="M35 50 Q50 35 65 50" stroke="#f97316" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M40 40 Q50 25 60 40" stroke="#fbbf24" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    </svg>
+  )
 };
 
 export default function VisualCatalogPos({
@@ -71,9 +93,9 @@ export default function VisualCatalogPos({
   cartTotal = 0,
   cartTotalQty = 0
 }) {
-  const [activeCategory, setActiveCategory] = useState('ALL'); // 'ALL' | 'BEER' | 'SODA' | 'WATER'
+  const [activeCategory, setActiveCategory] = useState('ALL'); // 'ALL' | 'BEER' | 'SODA' | 'WINE_LIQUOR' | 'DISH' | 'WATER'
 
-  // Retour sonore interactif (pop / click)
+  // Retour sonore interactif doux (pop)
   const playFeedbackSound = (type = 'add') => {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -85,7 +107,7 @@ export default function VisualCatalogPos({
       osc.type = 'triangle';
       const freq = type === 'add' ? 580 : 380;
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
 
       osc.connect(gain);
@@ -95,84 +117,151 @@ export default function VisualCatalogPos({
     } catch (e) {}
   };
 
-  // Retour haptique
-  const triggerHaptic = (intensity = 20) => {
+  // Retour tactile haptique (50ms conformément aux spécifications)
+  const triggerHaptic = (duration = 50) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
-        navigator.vibrate(intensity);
+        navigator.vibrate(duration);
       } catch (e) {}
     }
   };
 
+  // Incrémenter au toucher de la carte
   const handleAdd = (productId) => {
     playFeedbackSound('add');
-    triggerHaptic(25);
+    triggerHaptic(50);
     if (onAddToCart) onAddToCart(productId);
   };
 
+  // Décrémenter via bouton '-'
   const handleRemove = (productId) => {
     playFeedbackSound('remove');
-    triggerHaptic(15);
+    triggerHaptic(30);
     if (onRemoveFromCart) onRemoveFromCart(productId);
   };
 
-  // Identification visuelle de la boisson
+  // Identification visuelle et catégorisation de la boisson / plat
   const getProductVisualProps = (product) => {
+    const cat = (product.category || '').toUpperCase();
     const name = (product.name || '').toLowerCase();
-    const volume = (product.volume || '').toLowerCase();
+
+    // 1. Catégorie explicite si fournie
+    if (cat === 'WINE_LIQUOR') {
+      return {
+        bg: 'linear-gradient(145deg, #1e293b, #3b0764)',
+        borderColor: '#c084fc',
+        accentColor: '#e9d5ff',
+        svg: PRESET_SVGS.vin_liqueur,
+        category: 'WINE_LIQUOR',
+        picto: '🍷',
+      };
+    }
+    if (cat === 'DISH') {
+      return {
+        bg: 'linear-gradient(145deg, #1e293b, #7c2d12)',
+        borderColor: '#f97316',
+        accentColor: '#fdba74',
+        svg: PRESET_SVGS.plat_grillade,
+        category: 'DISH',
+        picto: '🍲',
+      };
+    }
+    if (cat === 'WATER') {
+      return {
+        bg: 'linear-gradient(145deg, #1e293b, #0369a1)',
+        borderColor: '#38bdf8',
+        accentColor: '#bae6fd',
+        svg: PRESET_SVGS.eau_bleue,
+        category: 'WATER',
+        picto: '💧',
+      };
+    }
+    if (cat === 'SODA') {
+      return {
+        bg: 'linear-gradient(145deg, #1e293b, #991b1b)',
+        borderColor: '#ef4444',
+        accentColor: '#fca5a5',
+        svg: PRESET_SVGS.sucrerie_rouge,
+        category: 'SODA',
+        picto: '🥤',
+      };
+    }
+
+    // 2. Déduction intelligente par mots-clés du nom
+    if (name.includes('plat') || name.includes('poulet') || name.includes('poisson') || name.includes('grill') || name.includes('attieke') || name.includes('riz')) {
+      return {
+        bg: 'linear-gradient(145deg, #1e293b, #7c2d12)',
+        borderColor: '#f97316',
+        accentColor: '#fdba74',
+        svg: PRESET_SVGS.plat_grillade,
+        category: 'DISH',
+        picto: '🍲',
+      };
+    }
+
+    if (name.includes('vin') || name.includes('liqueur') || name.includes('whisky') || name.includes('vodka') || name.includes('rhum') || name.includes('champagne')) {
+      return {
+        bg: 'linear-gradient(145deg, #1e293b, #3b0764)',
+        borderColor: '#c084fc',
+        accentColor: '#e9d5ff',
+        svg: PRESET_SVGS.vin_liqueur,
+        category: 'WINE_LIQUOR',
+        picto: '🍷',
+      };
+    }
 
     if (name.includes('guinness') || name.includes('doppel') || name.includes('stout')) {
       return {
-        bg: 'linear-gradient(145deg, #1c1917, #292524)',
-        borderColor: '#ca8a04',
-        accentColor: '#facc15',
-        svg: BOTTLE_SVG_PRESETS.stout_dark,
+        bg: 'linear-gradient(145deg, #1e293b, #292524)',
+        borderColor: '#facc15',
+        accentColor: '#fef08a',
+        svg: PRESET_SVGS.stout_dark,
         category: 'BEER',
-        badge: '🖤 Forte',
+        picto: '🖤',
       };
     }
 
     if (name.includes('sobebra') || name.includes('heineken') || name.includes('tuborg') || name.includes('33 export')) {
       return {
-        bg: 'linear-gradient(145deg, #064e3b, #047857)',
+        bg: 'linear-gradient(145deg, #1e293b, #065f46)',
         borderColor: '#10b981',
-        accentColor: '#34d399',
-        svg: BOTTLE_SVG_PRESETS.biere_verte,
+        accentColor: '#a7f3d0',
+        svg: PRESET_SVGS.biere_verte,
         category: 'BEER',
-        badge: '🍺 Verte',
+        picto: '🍺',
       };
     }
 
-    if (name.includes('coca') || name.includes('fanta') || name.includes('sprite') || name.includes('youki') || name.includes('maltina')) {
+    if (name.includes('coca') || name.includes('fanta') || name.includes('sprite') || name.includes('youki') || name.includes('maltina') || name.includes('soda')) {
       return {
-        bg: 'linear-gradient(145deg, #7f1d1d, #b91c1c)',
+        bg: 'linear-gradient(145deg, #1e293b, #991b1b)',
         borderColor: '#ef4444',
-        accentColor: '#f87171',
-        svg: BOTTLE_SVG_PRESETS.sucrerie_rouge,
+        accentColor: '#fca5a5',
+        svg: PRESET_SVGS.sucrerie_rouge,
         category: 'SODA',
-        badge: '🥤 Sucré',
+        picto: '🥤',
       };
     }
 
-    if (name.includes('eau') || name.includes('laafi') || name.includes('babali') || name.includes('tangui')) {
+    if (name.includes('eau') || name.includes('laafi') || name.includes('babali') || name.includes('tangui') || name.includes('water')) {
       return {
-        bg: 'linear-gradient(145deg, #0c4a6e, #0284c7)',
+        bg: 'linear-gradient(145deg, #1e293b, #0369a1)',
         borderColor: '#38bdf8',
-        accentColor: '#7dd3fc',
-        svg: BOTTLE_SVG_PRESETS.eau_bleue,
+        accentColor: '#bae6fd',
+        svg: PRESET_SVGS.eau_bleue,
         category: 'WATER',
-        badge: '💧 Eau',
+        picto: '💧',
       };
     }
 
-    // Bière blonde par défaut (Brakina, Beaufort...)
+    // Bière blonde par défaut (Brakina, Beaufort, Castel...)
     return {
-      bg: 'linear-gradient(145deg, #78350f, #b45309)',
+      bg: 'linear-gradient(145deg, #1e293b, #92400e)',
       borderColor: '#f59e0b',
-      accentColor: '#fbbf24',
-      svg: BOTTLE_SVG_PRESETS.biere_blonde,
+      accentColor: '#fde68a',
+      svg: PRESET_SVGS.biere_blonde,
       category: 'BEER',
-      badge: '🍺 Blonde',
+      picto: '🍺',
     };
   };
 
@@ -185,218 +274,212 @@ export default function VisualCatalogPos({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '10px' }}>
-      {/* 1. Filtres par pictogrammes géants pour serveurs non alphabétisés */}
+      {/* 1. Filtres par Pictogrammes Géants (Mode non-alphabétisé) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(6, 1fr)',
         gap: '6px',
         padding: '2px 0'
       }}>
-        <button
-          type="button"
-          onClick={() => { setActiveCategory('ALL'); triggerHaptic(15); }}
-          style={{
-            padding: '8px 4px',
-            borderRadius: '12px',
-            border: activeCategory === 'ALL' ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.08)',
-            background: activeCategory === 'ALL' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.02)',
-            color: activeCategory === 'ALL' ? '#10b981' : '#94a3b8',
-            fontWeight: 800,
-            fontSize: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>⚡</span>
-          <span>TOUT</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => { setActiveCategory('BEER'); triggerHaptic(15); }}
-          style={{
-            padding: '8px 4px',
-            borderRadius: '12px',
-            border: activeCategory === 'BEER' ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.08)',
-            background: activeCategory === 'BEER' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.02)',
-            color: activeCategory === 'BEER' ? '#f59e0b' : '#94a3b8',
-            fontWeight: 800,
-            fontSize: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>🍺</span>
-          <span>BIÈRES</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => { setActiveCategory('SODA'); triggerHaptic(15); }}
-          style={{
-            padding: '8px 4px',
-            borderRadius: '12px',
-            border: activeCategory === 'SODA' ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.08)',
-            background: activeCategory === 'SODA' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.02)',
-            color: activeCategory === 'SODA' ? '#ef4444' : '#94a3b8',
-            fontWeight: 800,
-            fontSize: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>🥤</span>
-          <span>SODAS</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => { setActiveCategory('WATER'); triggerHaptic(15); }}
-          style={{
-            padding: '8px 4px',
-            borderRadius: '12px',
-            border: activeCategory === 'WATER' ? '2px solid #0ea5e9' : '1px solid rgba(255,255,255,0.08)',
-            background: activeCategory === 'WATER' ? 'rgba(14, 165, 233, 0.2)' : 'rgba(255,255,255,0.02)',
-            color: activeCategory === 'WATER' ? '#0ea5e9' : '#94a3b8',
-            fontWeight: 800,
-            fontSize: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>💧</span>
-          <span>EAUX</span>
-        </button>
+        {[
+          { key: 'ALL', icon: '⚡', label: 'TOUT', color: '#10b981' },
+          { key: 'BEER', icon: '🍺', label: 'BIÈRES', color: '#f59e0b' },
+          { key: 'SODA', icon: '🥤', label: 'SODAS', color: '#ef4444' },
+          { key: 'WINE_LIQUOR', icon: '🍷', label: 'VINS', color: '#c084fc' },
+          { key: 'DISH', icon: '🍲', label: 'PLATS', color: '#f97316' },
+          { key: 'WATER', icon: '💧', label: 'EAUX', color: '#38bdf8' }
+        ].map(cat => {
+          const isActive = activeCategory === cat.key;
+          return (
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => { setActiveCategory(cat.key); triggerHaptic(30); }}
+              style={{
+                padding: '8px 2px',
+                borderRadius: '12px',
+                border: isActive ? `2px solid ${cat.color}` : '1px solid #334155',
+                background: isActive ? `${cat.color}25` : '#1e293b',
+                color: isActive ? '#ffffff' : '#94a3b8',
+                fontWeight: 900,
+                fontSize: '10px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: isActive ? `0 0 10px ${cat.color}40` : 'none'
+              }}
+            >
+              <span style={{ fontSize: '18px', lineHeight: 1 }}>{cat.icon}</span>
+              <span style={{ fontSize: '9px', fontWeight: 800 }}>{cat.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 2. Grille Visuelle Tactile (Cartes larges Touch Target >= 60px) */}
+      {/* 2. Grille Visuelle Tactile (Sans texte - Grandes Photos réelles) */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '10px',
+        gap: '12px',
         overflowY: 'auto',
-        maxHeight: '260px',
-        paddingRight: '4px'
+        maxHeight: '300px',
+        padding: '4px'
       }}>
         {filteredProducts.map((p) => {
           const qty = cart[p.id] || 0;
           const visual = getProductVisualProps(p);
           const isOutOfStock = p.current_stock <= 0;
+          const imageSrc = p.image_url || p.image_base64;
 
           return (
             <div
               key={p.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Article ${p.price} FCFA`}
+              onClick={() => {
+                if (!isOutOfStock) handleAdd(p.id);
+              }}
               style={{
                 position: 'relative',
                 background: visual.bg,
-                border: qty > 0 ? `3px solid ${visual.borderColor}` : '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '16px',
-                padding: '10px 8px',
+                border: qty > 0 ? `3px solid ${visual.borderColor}` : '1px solid #334155',
+                borderRadius: '18px',
+                padding: '12px 10px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                boxShadow: qty > 0 ? `0 0 14px ${visual.borderColor}55` : '0 4px 8px rgba(0,0,0,0.3)',
-                opacity: isOutOfStock ? 0.45 : 1,
-                minHeight: '130px',
+                boxShadow: qty > 0 ? `0 0 16px ${visual.borderColor}66` : '0 4px 12px rgba(0,0,0,0.4)',
+                opacity: isOutOfStock ? 0.35 : 1,
+                minHeight: '150px',
                 userSelect: 'none',
                 cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onClick={() => {
-                if (!isOutOfStock && qty === 0) handleAdd(p.id);
+                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: qty > 0 ? 'scale(1.02)' : 'scale(1)'
               }}
             >
-              {/* Badge type boisson en haut */}
+              {/* Badge supérieur : Picto catégorie & volume visuel */}
               <div style={{
-                alignSelf: 'flex-start',
-                fontSize: '10px',
-                fontWeight: 800,
-                background: 'rgba(0,0,0,0.55)',
-                color: visual.accentColor,
-                padding: '2px 6px',
-                borderRadius: '6px',
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '2px'
+                width: '100%'
               }}>
-                {visual.badge}
-              </div>
+                <span style={{
+                  fontSize: '14px',
+                  background: 'rgba(15, 23, 42, 0.8)',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  {visual.picto}
+                </span>
 
-              {/* Bouteille centrale vectorielle HD */}
-              <div style={{
-                width: '46px',
-                height: '62px',
-                margin: '2px 0',
-                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))'
-              }}>
-                {p.image_base64 && p.image_base64.startsWith('data:image') ? (
-                  <img src={p.image_base64} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : (
-                  visual.svg
+                {p.volume && (
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: '#e2e8f0',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}>
+                    {p.volume}
+                  </span>
                 )}
               </div>
 
-              {/* Nom & Volume (Très lisible) */}
-              <div style={{ textAlign: 'center', width: '100%' }}>
-                <div style={{
-                  fontSize: '13px',
-                  fontWeight: 900,
-                  color: '#ffffff',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                }}>
-                  {p.name}
-                </div>
-                <div style={{
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  color: '#fbbf24',
-                  background: 'rgba(0,0,0,0.6)',
-                  borderRadius: '6px',
-                  padding: '1px 6px',
-                  marginTop: '2px',
-                  display: 'inline-block'
-                }}>
-                  {p.price} F <span style={{ fontSize: '9px', color: '#cbd5e1' }}>({p.volume})</span>
-                </div>
+              {/* Grande Photo Réelle ou Illustration vectorielle HD */}
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                height: '80px',
+                margin: '6px 0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.6))'
+              }}>
+                {imageSrc ? (
+                  <img
+                    src={imageSrc}
+                    alt=""
+                    style={{
+                      maxHeight: '100%',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      borderRadius: '8px'
+                    }}
+                  />
+                ) : (
+                  <div style={{ width: '56px', height: '76px' }}>
+                    {visual.svg}
+                  </div>
+                )}
+
+                {/* Badge Géant de Quantité sélectionnée */}
+                {qty > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-4px',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 900,
+                    minWidth: '34px',
+                    height: '34px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.6)',
+                    border: '2px solid #ffffff',
+                    animation: 'pulse 1.5s infinite'
+                  }}>
+                    x{qty}
+                  </div>
+                )}
               </div>
 
-              {/* Boutons de contrôle géants (+ / -) */}
-              {qty > 0 ? (
+              {/* Prix en gros chiffres sans texte (reconnaissance visuelle immédiate) */}
+              <div style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: '4px'
+              }}>
                 <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  marginTop: '6px',
-                  background: 'rgba(0,0,0,0.65)',
-                  borderRadius: '12px',
-                  padding: '2px 4px'
+                  fontSize: '16px',
+                  fontWeight: 900,
+                  color: '#ffffff',
+                  background: 'rgba(15, 23, 42, 0.9)',
+                  padding: '4px 10px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  letterSpacing: '0.5px'
                 }}>
+                  {p.price} <span style={{ fontSize: '11px', color: '#facc15' }}>F</span>
+                </div>
+
+                {/* Bouton décrémenter si article dans le panier */}
+                {qty > 0 && (
                   <button
                     type="button"
+                    aria-label="Diminuer"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRemove(p.id);
                     }}
                     style={{
-                      width: '38px',
-                      height: '38px',
+                      width: '34px',
+                      height: '34px',
                       borderRadius: '10px',
                       background: 'rgba(239, 68, 68, 0.25)',
                       border: '1px solid #ef4444',
@@ -404,92 +487,46 @@ export default function VisualCatalogPos({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '18px',
-                      fontWeight: 900,
                       cursor: 'pointer'
                     }}
                   >
-                    <Minus size={16} />
+                    <Minus size={18} />
                   </button>
+                )}
+              </div>
 
-                  <span style={{
-                    fontSize: '18px',
-                    fontWeight: 900,
-                    color: '#ffffff',
-                    minWidth: '24px',
-                    textAlign: 'center'
-                  }}>
-                    {qty}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAdd(p.id);
-                    }}
-                    disabled={p.current_stock <= qty}
-                    style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '10px',
-                      background: '#10b981',
-                      border: 'none',
-                      color: '#09261a',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '18px',
-                      fontWeight: 900,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Plus size={18} />
-                  </button>
+              {isOutOfStock && (
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  borderRadius: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ef4444',
+                  fontWeight: 900,
+                  fontSize: '14px',
+                  border: '2px dashed #ef4444'
+                }}>
+                  ÉPUISÉ ✕
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!isOutOfStock) handleAdd(p.id);
-                  }}
-                  disabled={isOutOfStock}
-                  style={{
-                    width: '100%',
-                    height: '38px',
-                    marginTop: '6px',
-                    borderRadius: '10px',
-                    background: isOutOfStock ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.18)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: isOutOfStock ? 'rgba(255,255,255,0.3)' : '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    fontSize: '13px',
-                    fontWeight: 800,
-                    cursor: isOutOfStock ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  <Plus size={16} />
-                  <span>AJOUTER</span>
-                </button>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* 3. Bandeau Panier & Règlements 1-Tap ultra-visuel */}
+      {/* 3. Bandeau Panier & Règlements Tactiles Instantanés */}
       <div style={{
-        background: 'linear-gradient(180deg, #121218, #0a0a0e)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '16px',
-        padding: '10px',
+        background: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: '18px',
+        padding: '12px 14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px'
+        gap: '10px',
+        boxShadow: '0 8px 20px rgba(0,0,0,0.5)'
       }}>
         {/* Total visuel gros format */}
         <div style={{
@@ -497,29 +534,34 @@ export default function VisualCatalogPos({
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{
-              background: 'rgba(16, 185, 129, 0.15)',
-              color: '#10b981',
-              padding: '3px 8px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: 800
+              background: 'rgba(16, 185, 129, 0.2)',
+              border: '1px solid #10b981',
+              color: '#34d399',
+              padding: '4px 10px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 900
             }}>
-              {cartTotalQty} {cartTotalQty > 1 ? 'bouteilles' : 'bouteille'}
+              {cartTotalQty} {cartTotalQty > 1 ? 'articles' : 'article'}
             </span>
             {cartTotalQty > 0 && (
               <button
                 type="button"
                 onClick={onClearCart}
                 style={{
-                  background: 'none',
-                  border: 'none',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid #ef4444',
+                  borderRadius: '8px',
                   color: '#ef4444',
                   cursor: 'pointer',
-                  padding: '4px'
+                  padding: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
-                title="Vider"
+                title="Vider le panier"
               >
                 <Trash2 size={15} />
               </button>
@@ -527,38 +569,39 @@ export default function VisualCatalogPos({
           </div>
 
           <div style={{
-            fontSize: '18px',
+            fontSize: '22px',
             fontWeight: 900,
             color: '#10b981',
-            letterSpacing: '0.5px'
+            letterSpacing: '0.5px',
+            textShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
           }}>
             {cartTotal.toLocaleString()} F CFA
           </div>
         </div>
 
-        {/* 2 Gros Boutons de Règlements Rapides (Cash / MoMo) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        {/* 2 Gros Boutons de Règlements Tactiles (Cash / MoMo) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <button
             type="button"
             onClick={onCheckoutCash}
             disabled={cartTotalQty === 0}
             style={{
-              padding: '12px 6px',
-              borderRadius: '12px',
+              padding: '14px 8px',
+              borderRadius: '14px',
               border: 'none',
-              background: cartTotalQty === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #10b981, #059669)',
-              color: cartTotalQty === 0 ? 'rgba(255,255,255,0.2)' : '#ffffff',
+              background: cartTotalQty === 0 ? '#334155' : 'linear-gradient(135deg, #10b981, #059669)',
+              color: cartTotalQty === 0 ? '#94a3b8' : '#ffffff',
               fontWeight: 900,
-              fontSize: '12px',
+              fontSize: '13px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
               cursor: cartTotalQty === 0 ? 'not-allowed' : 'pointer',
-              boxShadow: cartTotalQty > 0 ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none'
+              boxShadow: cartTotalQty > 0 ? '0 4px 14px rgba(16, 185, 129, 0.4)' : 'none'
             }}
           >
-            <DollarSign size={16} />
+            <DollarSign size={18} />
             <span>💵 ESPÈCES</span>
           </button>
 
@@ -567,22 +610,22 @@ export default function VisualCatalogPos({
             onClick={onCheckoutMoMo}
             disabled={cartTotalQty === 0}
             style={{
-              padding: '12px 6px',
-              borderRadius: '12px',
+              padding: '14px 8px',
+              borderRadius: '14px',
               border: 'none',
-              background: cartTotalQty === 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #f97316, #ea580c)',
-              color: cartTotalQty === 0 ? 'rgba(255,255,255,0.2)' : '#ffffff',
+              background: cartTotalQty === 0 ? '#334155' : 'linear-gradient(135deg, #f97316, #ea580c)',
+              color: cartTotalQty === 0 ? '#94a3b8' : '#ffffff',
               fontWeight: 900,
-              fontSize: '12px',
+              fontSize: '13px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
               cursor: cartTotalQty === 0 ? 'not-allowed' : 'pointer',
-              boxShadow: cartTotalQty > 0 ? '0 4px 12px rgba(249, 115, 22, 0.35)' : 'none'
+              boxShadow: cartTotalQty > 0 ? '0 4px 14px rgba(249, 115, 22, 0.4)' : 'none'
             }}
           >
-            <Smartphone size={16} />
+            <Smartphone size={18} />
             <span>📱 MOBILE MONEY</span>
           </button>
         </div>
