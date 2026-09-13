@@ -1033,6 +1033,56 @@ body {
   }
 }
 
+/* --- Styles Applicatifs Standalone & Mobile-First (PWA & POS Dédié) --- */
+.container-app {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (max-width: 640px) {
+  .container-app {
+    max-width: 100%;
+  }
+}
+
+.app-standalone-container {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-standalone-container .device-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-standalone-container .device-frame {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  aspect-ratio: auto;
+  max-height: none;
+}
+
+.app-standalone-container .device-screen {
+  border-radius: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 
 
 /* New simulator styles for multi-role, 2-step checkout, offline images, and limits */

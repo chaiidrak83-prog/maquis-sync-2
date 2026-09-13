@@ -190,8 +190,8 @@ export const staffService = {
     return data;
   },
 
-  async registerWaitress({ establishmentId, name, phone, pin }) {
-    if (!isSupabaseConfigured()) throw new Error('Supabase non configuré');
+  async registerUser({ establishmentId, name, phone, pin, role = 'WAITRESS' }) {
+    if (!isSupabaseConfigured()) return null;
     const { data, error } = await supabase
       .from('users')
       .insert({
@@ -199,7 +199,7 @@ export const staffService = {
         name,
         phone,
         pin_hash: pin,
-        role: 'WAITRESS',
+        role,
         status: 'PENDING',
         is_active: true
       })
@@ -207,8 +207,14 @@ export const staffService = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async registerWaitress({ establishmentId, name, phone, pin }) {
+    return this.registerUser({ establishmentId, name, phone, pin, role: 'WAITRESS' });
   }
 };
+
+export const userService = staffService;
 
 export const attendanceService = {
   async getAll(establishmentId) {

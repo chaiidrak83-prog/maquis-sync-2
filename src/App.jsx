@@ -5,7 +5,8 @@ import {
   salesService, 
   staffService, 
   attendanceService, 
-  establishmentService 
+  establishmentService,
+  userService 
 } from './services/api';
 import { 
   Wifi, 
@@ -66,6 +67,14 @@ export default function App() {
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [onboardingInitialPlan, setOnboardingInitialPlan] = useState('Accès');
   const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [isStandaloneApp, setIsStandaloneApp] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const search = new URLSearchParams(window.location.search);
+    const host = window.location.hostname.toLowerCase();
+    const isSubdomain = host.startsWith('app.') || host.startsWith('pos.') || host.startsWith('caisse.') || host.startsWith('pwa.');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator?.standalone === true;
+    return search.get('source') === 'pwa' || isStandalone || isSubdomain;
+  });
 
   // Écoute de l'URL cachée #boss-admin ou lancement direct PWA autonome
   useEffect(() => {
@@ -75,7 +84,11 @@ export default function App() {
       const search = new URLSearchParams(window.location.search);
       const host = window.location.hostname.toLowerCase();
       const isSubdomain = host.startsWith('app.') || host.startsWith('pos.') || host.startsWith('caisse.') || host.startsWith('pwa.');
-      const isPwa = search.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches || isSubdomain;
+      const isPwa = search.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches || window.navigator?.standalone === true || isSubdomain;
+
+      if (isPwa) {
+        setIsStandaloneApp(true);
+      }
 
       if (hash === '#boss-admin' || hash === '#/boss-admin' || path === '/boss-admin') {
         setViewMode('BOSS_ADMIN');
@@ -105,8 +118,9 @@ export default function App() {
     { id: 'sa1', name: 'Super Administrateur', phone: '00000000', pin: '9999', role: 'SUPER_ADMIN', status: 'VALIDATED', is_active: true },
     { id: 'u1', name: 'Alassane Touré', phone: '76000000', pin: '1111', role: 'OWNER', status: 'VALIDATED', is_active: true },
     { id: 'u2', name: 'Koffi Mensah', phone: '70222222', pin: '2222', role: 'MANAGER', status: 'VALIDATED', is_active: true },
+    { id: 'm2', name: 'Moussa Sanogo', phone: '70998877', pin: '6666', role: 'MANAGER', status: 'PENDING', is_active: true }, // Gérant en attente de validation par propriétaire
     { id: 'w1', name: 'Awa Diallo', phone: '70123456', pin: '3333', role: 'WAITRESS', status: 'VALIDATED', is_active: true },
-    { id: 'w2', name: 'Mariam Koné', phone: '70890123', pin: '4444', role: 'WAITRESS', status: 'PENDING', is_active: true },
+    { id: 'w2', name: 'Mariam Koné', phone: '70890123', pin: '4444', role: 'WAITRESS', status: 'PENDING', is_active: true }, // Serveuse en attente de validation par gérant
     { id: 'w3', name: 'Fatou Bamba', phone: '77456789', pin: '5555', role: 'WAITRESS', status: 'VALIDATED', is_active: false }, // Soft deleted (turnover)
   ]);
 
@@ -148,11 +162,13 @@ export default function App() {
   const [isRegisteringMode, setIsRegisteringMode] = useState(false);
   
   // Registration Inputs
+  const [regRoleInput, setRegRoleInput] = useState('WAITRESS'); // 'WAITRESS' | 'MANAGER'
   const [regNameInput, setRegNameInput] = useState('');
   const [regPhoneInput, setRegPhoneInput] = useState('');
   const [regPinInput, setRegPinInput] = useState('');
 
   // --- Owner (Propriétaire) View States ---
+  const [ownerTab, setOwnerTab] = useState('finances'); // 'finances' | 'team'
   const [ownerTimeFilter, setOwnerTimeFilter] = useState('JOUR'); // 'JOUR' | 'SEMAINE' | 'MOIS'
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState('+226 76 00 00 00');
@@ -378,6 +394,11 @@ export default function App() {
       return;
     }
 
+    if (user.status === 'REJECTED') {
+      setAuthError('Votre inscription a été refusée par la direction de l\'établissement.');
+      return;
+    }
+
     setAuthError('');
     setLoggedInUserId(user.id);
     setPhoneLoginInput('');
@@ -392,39 +413,57 @@ export default function App() {
     }
   };
 
-  // Self Registration handler (côté serveuse)
-  const handleRegisterSubmit = (e) => {
+  // Self Registration handler (Gérant ou Serveuse)
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!regNameInput || !regPhoneInput || regPinInput.length < 4) {
-      setAuthError('Veuillez remplir le nom, le téléphone et un PIN de 4-6 chiffres.');
+    if (!regNameInput.trim() || !regPhoneInput.trim() || regPinInput.length < 4) {
+      setAuthError('Veuillez renseigner le nom, le numéro de téléphone et un code PIN de 4 chiffres.');
       return;
     }
 
     // Check if phone number already exists
-    if (users.some(u => u.phone === regPhoneInput)) {
+    if (users.some(u => u.phone === regPhoneInput.trim())) {
       setAuthError('Ce numéro de téléphone est déjà enregistré.');
       return;
     }
 
     setAuthError('');
     const newId = 'u_' + Date.now();
-    const newW = {
+    const newUser = {
       id: newId,
-      name: regNameInput,
-      phone: regPhoneInput,
+      name: regNameInput.trim(),
+      phone: regPhoneInput.trim(),
       pin: regPinInput,
-      role: 'WAITRESS',
+      role: regRoleInput, // 'MANAGER' or 'WAITRESS'
       status: 'PENDING',
       is_active: true
     };
 
-    setUsers(prev => [...prev, newW]);
+    setUsers(prev => [...prev, newUser]);
+    
+    // Synchro Supabase en arrière-plan si en ligne
+    if (isOnline) {
+      try {
+        await userService.registerUser({
+          establishmentId,
+          name: newUser.name,
+          phone: newUser.phone,
+          pin: newUser.pin,
+          role: newUser.role
+        });
+      } catch (err) {
+        console.warn('Sync Supabase inscription:', err);
+      }
+    }
+
+    // Connecte directement l'utilisateur sur l'écran d'attente d'approbation
     setLoggedInUserId(newId);
     
     // Clear inputs
     setRegNameInput('');
     setRegPhoneInput('');
     setRegPinInput('');
+    setRegRoleInput('WAITRESS');
     setIsRegisteringMode(false);
   };
 
@@ -631,6 +670,31 @@ export default function App() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: nextActive } : u));
     if (isSupabaseConfigured() && id.length > 20) {
       staffService.toggleActive(id, nextActive).catch(err => console.warn('Erreur activation Supabase:', err));
+    }
+  };
+
+  // Propriétaire approvals for Gérants
+  const handleApproveManager = (id) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'VALIDATED' } : u));
+    if (isSupabaseConfigured() && id.length > 20) {
+      staffService.updateStatus(id, 'VALIDATED').catch(err => console.warn('Erreur validation Supabase:', err));
+    }
+  };
+
+  const handleRejectManager = (id) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'REJECTED' } : u));
+    if (isSupabaseConfigured() && id.length > 20) {
+      staffService.updateStatus(id, 'REJECTED').catch(err => console.warn('Erreur rejet Supabase:', err));
+    }
+  };
+
+  const handleToggleManagerActive = (id) => {
+    const userToToggle = users.find(u => u.id === id);
+    if (!userToToggle) return;
+    const nextActive = !userToToggle.is_active;
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: nextActive } : u));
+    if (isSupabaseConfigured() && id.length > 20) {
+      staffService.toggleActive(id, nextActive).catch(err => console.warn('Erreur activation Gérant Supabase:', err));
     }
   };
 
@@ -1010,23 +1074,16 @@ export default function App() {
     </>
   )}
 
-      {/* 4. DYNAMIC INTERACTIVE DEMO (UNIFIED MOBILE APP SIMULATOR) */}
+      {/* 4. DYNAMIC INTERACTIVE DEMO / STANDALONE APP */}
       {viewMode !== 'SUPER_ADMIN' && (
-        <section id="demo" className="demo-section" style={viewMode === 'MOBILE_POS' ? { paddingTop: '24px' } : {}}>
-        <div className="container">
-          {viewMode === 'MOBILE_POS' ? (
-            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', fontWeight: 700, fontSize: '13px', marginBottom: '12px' }}>
-                <Smartphone size={15} /> Interface Mobile Serveuse (POS) en direct
-              </div>
-              <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#f8fafc', margin: '0 0 8px 0' }}>
-                Testez la prise de commande et l'encaissement
-              </h2>
-              <p style={{ color: '#94a3b8', fontSize: '14px', maxWidth: '650px', margin: '0 auto' }}>
-                Ajoutez des boissons au panier dans le téléphone ci-dessous, encaissez en Espèces ou Mobile Money, et observez la mise à jour en temps réel sur Supabase.
-              </p>
-            </div>
-          ) : (
+        <section 
+          id="demo" 
+          className={`demo-section ${(viewMode === 'MOBILE_POS' || isStandaloneApp) ? 'app-mode-active' : ''}`} 
+          style={(viewMode === 'MOBILE_POS' || isStandaloneApp) ? { padding: 0, border: 'none', background: 'transparent' } : {}}
+        >
+        <div className={(viewMode === 'MOBILE_POS' || isStandaloneApp) ? 'container-app' : 'container'}>
+          {/* Header ONLY in desktop LANDING mode preview */}
+          {viewMode === 'LANDING' && !isStandaloneApp && (
             <div className="section-header">
               <h2 className="section-title">Application Mobile <span>Tout-en-Un</span></h2>
               <p className="section-subtitle">
@@ -1035,110 +1092,109 @@ export default function App() {
             </div>
           )}
 
-          <div className="demo-grid">
-            {/* Left: Test credentials and simulation helper */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div className="glass-card" style={{ padding: '24px' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontFamily: 'var(--font-heading)', color: 'var(--primary)', fontSize: '20px' }}>Comptes de Test</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {/* Owner Credentials */}
-                  <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>👑 Propriétaire (Owner)</span>
-                      <button 
-                        onClick={() => {
-                          setPhoneLoginInput('76000000');
-                          setPinLoginInput('1111');
-                          setIsRegisteringMode(false);
-                        }}
-                        className="btn btn-secondary"
-                        style={{ padding: '2px 8px', fontSize: '11px' }}
-                      >
-                        Saisir
-                      </button>
+          <div className={(viewMode === 'MOBILE_POS' || isStandaloneApp) ? 'app-standalone-container' : 'demo-grid'}>
+            {/* Left: Test credentials and simulation helper - ONLY in desktop marketing LANDING mode, HIDDEN when app is downloaded/installed */}
+            {viewMode === 'LANDING' && !isStandaloneApp && (
+              <div className="simulation-guide-col" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="glass-card" style={{ padding: '24px' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontFamily: 'var(--font-heading)', color: 'var(--primary)', fontSize: '20px' }}>Comptes de Démonstration</h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Owner Credentials */}
+                    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>👑 Propriétaire (Owner)</span>
+                        <button 
+                          onClick={() => {
+                            setPhoneLoginInput('76000000');
+                            setPinLoginInput('1111');
+                            setIsRegisteringMode(false);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '2px 8px', fontSize: '11px' }}
+                        >
+                          Saisir
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        Tél : <code style={{ color: 'var(--primary)' }}>76000000</code> | Code PIN : <code style={{ color: 'var(--primary)' }}>1111</code>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        Rôle : Valide les gérants, gère la formule d'abonnement, paramètre la syntaxe USSD et consulte les rapports.
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      Tél : <code style={{ color: 'var(--primary)' }}>76000000</code> | Code PIN : <code style={{ color: 'var(--primary)' }}>1111</code>
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Rôle : Gère la formule d'abonnement, paramètre la syntaxe USSD et consulte les rapports (Jour/Semaine/Mois).
-                    </div>
-                  </div>
 
-                  {/* Manager Credentials */}
-                  <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>💼 Gérant (Manager)</span>
-                      <button 
-                        onClick={() => {
-                          setPhoneLoginInput('70222222');
-                          setPinLoginInput('2222');
-                          setIsRegisteringMode(false);
-                        }}
-                        className="btn btn-secondary"
-                        style={{ padding: '2px 8px', fontSize: '11px' }}
-                      >
-                        Saisir
-                      </button>
+                    {/* Manager Credentials */}
+                    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>💼 Gérant (Manager)</span>
+                        <button 
+                          onClick={() => {
+                            setPhoneLoginInput('70222222');
+                            setPinLoginInput('2222');
+                            setIsRegisteringMode(false);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '2px 8px', fontSize: '11px' }}
+                        >
+                          Saisir
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        Tél : <code style={{ color: 'var(--primary)' }}>70222222</code> | Code PIN : <code style={{ color: 'var(--primary)' }}>2222</code>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        Rôle : Valide les comptes serveuses, gère le catalogue des boissons (ajouts, volumes), et contrôle les présences.
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      Tél : <code style={{ color: 'var(--primary)' }}>70222222</code> | Code PIN : <code style={{ color: 'var(--primary)' }}>2222</code>
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Rôle : Valide les comptes serveuses, gère le catalogue des boissons (ajouts, volumes), et contrôle les présences.
-                    </div>
-                  </div>
 
-                  {/* Waitress Credentials */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>🍹 Serveuse (Waitress)</span>
-                      <button 
-                        onClick={() => {
-                          setPhoneLoginInput('70123456');
-                          setPinLoginInput('3333');
-                          setIsRegisteringMode(false);
-                        }}
-                        className="btn btn-secondary"
-                        style={{ padding: '2px 8px', fontSize: '11px' }}
-                      >
-                        Saisir
-                      </button>
+                    {/* Waitress Credentials */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>🍹 Serveuse (Waitress)</span>
+                        <button 
+                          onClick={() => {
+                            setPhoneLoginInput('70123456');
+                            setPinLoginInput('3333');
+                            setIsRegisteringMode(false);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '2px 8px', fontSize: '11px' }}
+                        >
+                          Saisir
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        Tél : <code style={{ color: 'var(--primary)' }}>70123456</code> | Code PIN : <code style={{ color: 'var(--primary)' }}>3333</code>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        Rôle : Prise de commande en 2 étapes, pointage de présence QR, encaissement USSD.
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      Tél : <code style={{ color: 'var(--primary)' }}>70123456</code> | Code PIN : <code style={{ color: 'var(--primary)' }}>3333</code>
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Rôle : Prise de commande en 2 étapes, pointage de présence QR, encaissement USSD.
-                    </div>
-                  </div>
 
+                  </div>
+                </div>
+
+                {/* Simulation Instructions */}
+                <div className="glass-card" style={{ padding: '24px' }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontFamily: 'var(--font-heading)', color: 'var(--primary)' }}>Guide de simulation interactif :</h4>
+                  <ol style={{ margin: '0', paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <li style={{ marginBottom: '6px' }}>
+                      Inscrivez un <strong>Gérant</strong> : son compte sera en attente d'approbation par le Propriétaire.
+                    </li>
+                    <li style={{ marginBottom: '6px' }}>
+                      Connectez-vous en tant que <strong>Propriétaire (76000000)</strong> pour valider le nouveau gérant dans l'onglet <em>Gérants & Équipe</em>.
+                    </li>
+                    <li style={{ marginBottom: '6px' }}>
+                      Inscrivez une <strong>Serveuse</strong> : son compte sera en attente d'approbation par le Gérant.
+                    </li>
+                    <li style={{ marginBottom: '6px' }}>
+                      Connectez-vous en tant que <strong>Gérant (70222222)</strong> pour valider la serveuse dans l'onglet <em>Équipe</em>.
+                    </li>
+                  </ol>
                 </div>
               </div>
-
-              {/* Simulation Instructions */}
-              <div className="glass-card" style={{ padding: '24px' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontFamily: 'var(--font-heading)', color: 'var(--primary)' }}>Guide de simulation interactif :</h4>
-                <ol style={{ margin: '0', paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
-                  <li style={{ marginBottom: '6px' }}>
-                    Connectez-vous en tant que <strong>Propriétaire (76000000)</strong> et sélectionnez la formule <strong>Découverte (limite: 10 serveuses)</strong>. Paramétrez un template USSD Moov ou Orange.
-                  </li>
-                  <li style={{ marginBottom: '6px' }}>
-                    Déconnectez-vous, puis cliquez sur <strong>S'enregistrer</strong> pour inscrire une nouvelle serveuse de test.
-                  </li>
-                  <li style={{ marginBottom: '6px' }}>
-                    Connectez-vous en tant que <strong>Gérant (70222222)</strong> pour valider l'inscription de la serveuse. Ajoutez une nouvelle boisson dans l'onglet <strong>Catalogue</strong>.
-                  </li>
-                  <li style={{ marginBottom: '6px' }}>
-                    Connectez-vous en tant que la nouvelle serveuse. Vous constaterez que la nouvelle boisson est disponible dans votre catalogue mobile.
-                  </li>
-                  <li>
-                    Faites une vente Mobile Money, et observez la génération USSD dynamique basée sur la syntaxe exclusive du propriétaire.
-                  </li>
-                </ol>
-              </div>
-            </div>
+            )}
 
             {/* Right: The Simulator Device */}
             <div className="device-container">
@@ -1268,31 +1324,98 @@ export default function App() {
                             </form>
 
                             <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nouvelle serveuse ? </span>
+                              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nouveau membre ? </span>
                               <button 
-                                onClick={() => { setIsRegisteringMode(true); setAuthError(''); }}
+                                onClick={() => { setIsRegisteringMode(true); setAuthError(''); setRegRoleInput('WAITRESS'); }}
                                 style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', padding: 0 }}
                               >
-                                S'enregistrer
+                                S'enregistrer (Gérant / Serveuse)
                               </button>
                             </div>
                           </>
                         ) : (
-                          // SELF REGISTRATION FORM (SERVEUSE AUTO-INSCRIPTION)
+                          // SELF REGISTRATION FORM (GÉRANT OU SERVEUSE)
                           <>
-                            <h3 style={{ textAlign: 'center', marginBottom: '4px', fontSize: '18px', fontFamily: 'var(--font-heading)' }}>S'enregistrer</h3>
-                            
-                            {/* Limit info banner */}
-                            <div style={{ background: 'rgba(249, 115, 22, 0.05)', border: '1px solid rgba(249, 115, 22, 0.15)', padding: '6px 8px', borderRadius: '6px', fontSize: '11px', color: 'var(--primary)', marginBottom: '12px', textAlign: 'center' }}>
-                              Limite active : {activeWaitressesCount} / {activeWaitressLimit === Infinity ? 'Illimitée' : activeWaitressLimit} serveuses
+                            <h3 style={{ textAlign: 'center', marginBottom: '4px', fontSize: '18px', fontFamily: 'var(--font-heading)' }}>Créer un Compte</h3>
+                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '12px' }}>
+                              Choisissez votre rôle pour soumettre votre demande d'accès.
+                            </p>
+
+                            {/* Rôle Selector */}
+                            <div style={{ marginBottom: '12px' }}>
+                              <label className="input-label" style={{ marginBottom: '6px', fontSize: '11px' }}>Votre fonction :</label>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setRegRoleInput('WAITRESS')}
+                                  style={{
+                                    padding: '8px 6px',
+                                    borderRadius: '8px',
+                                    border: regRoleInput === 'WAITRESS' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                                    background: regRoleInput === 'WAITRESS' ? 'rgba(217, 160, 91, 0.15)' : 'rgba(255,255,255,0.02)',
+                                    color: regRoleInput === 'WAITRESS' ? 'var(--primary)' : 'var(--text-secondary)',
+                                    fontWeight: 'bold',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                >
+                                  <span style={{ fontSize: '16px' }}>🍹</span>
+                                  <span>Serveuse</span>
+                                  <span style={{ fontSize: '8px', fontWeight: 'normal', color: 'var(--text-muted)' }}>Validée par Gérant</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRegRoleInput('MANAGER')}
+                                  style={{
+                                    padding: '8px 6px',
+                                    borderRadius: '8px',
+                                    border: regRoleInput === 'MANAGER' ? '2px solid var(--secondary)' : '1px solid var(--border-color)',
+                                    background: regRoleInput === 'MANAGER' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.02)',
+                                    color: regRoleInput === 'MANAGER' ? 'var(--secondary)' : 'var(--text-secondary)',
+                                    fontWeight: 'bold',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                >
+                                  <span style={{ fontSize: '16px' }}>💼</span>
+                                  <span>Gérant</span>
+                                  <span style={{ fontSize: '8px', fontWeight: 'normal', color: 'var(--text-muted)' }}>Validé par Propriétaire</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Validation hierarchy banner */}
+                            <div style={{ 
+                              background: regRoleInput === 'MANAGER' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(217, 160, 91, 0.08)', 
+                              border: `1px solid ${regRoleInput === 'MANAGER' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(217, 160, 91, 0.25)'}`, 
+                              padding: '8px 10px', 
+                              borderRadius: '8px', 
+                              fontSize: '11px', 
+                              color: regRoleInput === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)', 
+                              marginBottom: '12px', 
+                              textAlign: 'center',
+                              lineHeight: '1.4'
+                            }}>
+                              {regRoleInput === 'MANAGER' 
+                                ? "👑 Inscription Gérant : Votre compte sera soumis à la validation du Propriétaire de l'établissement." 
+                                : `💼 Inscription Serveuse : Votre compte sera soumis à la validation du Gérant (${activeWaitressesCount}/${activeWaitressLimit === Infinity ? 'Illimitée' : activeWaitressLimit} actives).`
+                              }
                             </div>
 
                             <form onSubmit={handleRegisterSubmit}>
                               <div className="input-group">
-                                <label className="input-label">Nom complet</label>
+                                <label className="input-label">Nom et Prénom</label>
                                 <input 
                                   type="text" 
-                                  placeholder="Aminata Koné" 
+                                  placeholder={regRoleInput === 'MANAGER' ? 'Moussa Sanogo' : 'Aminata Koné'}
                                   className="input-field"
                                   value={regNameInput}
                                   onChange={(e) => setRegNameInput(e.target.value)}
@@ -1349,9 +1472,10 @@ export default function App() {
                               <button 
                                 type="submit" 
                                 className="btn btn-primary" 
-                                style={{ width: '100%', marginTop: '14px', padding: '10px' }}
+                                style={{ width: '100%', marginTop: '14px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                               >
-                                Envoyer la demande
+                                <span>{regRoleInput === 'MANAGER' ? "S'inscrire comme Gérant" : "S'inscrire comme Serveuse"}</span>
+                                <ArrowRight size={14} />
                               </button>
                             </form>
 
@@ -1360,7 +1484,7 @@ export default function App() {
                                 onClick={() => { setIsRegisteringMode(false); setAuthError(''); }}
                                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', textDecoration: 'underline', fontSize: '12px', cursor: 'pointer' }}
                               >
-                                Annuler
+                                Déjà un compte ? Se connecter
                               </button>
                             </div>
                           </>
@@ -1431,180 +1555,373 @@ export default function App() {
                       currentUser.role === 'OWNER' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                           <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                               <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>Vue Propriétaire</h4>
                               <button onClick={() => setLoggedInUserId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><LogOut size={16} /></button>
                             </div>
 
-                            {/* Time Filters */}
-                            <div className="filter-tabs">
-                              <button className={`filter-tab-btn ${ownerTimeFilter === 'JOUR' ? 'active' : ''}`} onClick={() => setOwnerTimeFilter('JOUR')}>Jour</button>
-                              <button className={`filter-tab-btn ${ownerTimeFilter === 'SEMAINE' ? 'active' : ''}`} onClick={() => setOwnerTimeFilter('SEMAINE')}>Semaine</button>
-                              <button className={`filter-tab-btn ${ownerTimeFilter === 'MOIS' ? 'active' : ''}`} onClick={() => setOwnerTimeFilter('MOIS')}>Mois</button>
+                            {/* Owner Navigation Tabs */}
+                            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '12px' }}>
+                              <button 
+                                onClick={() => setOwnerTab('finances')} 
+                                style={{ 
+                                  flex: 1, 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  borderBottom: ownerTab === 'finances' ? '2px solid var(--primary)' : 'none', 
+                                  color: ownerTab === 'finances' ? 'var(--primary)' : 'var(--text-muted)', 
+                                  fontSize: '11px', 
+                                  paddingBottom: '8px', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer' 
+                                }}
+                              >
+                                📊 Finances & Réglages
+                              </button>
+                              <button 
+                                onClick={() => setOwnerTab('team')} 
+                                style={{ 
+                                  flex: 1.1, 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  borderBottom: ownerTab === 'team' ? '2px solid var(--primary)' : 'none', 
+                                  color: ownerTab === 'team' ? 'var(--primary)' : 'var(--text-muted)', 
+                                  fontSize: '11px', 
+                                  paddingBottom: '8px', 
+                                  fontWeight: 'bold', 
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <span>👥 Gérants & Équipe</span>
+                                {users.some(u => u.role === 'MANAGER' && u.status === 'PENDING') && (
+                                  <span style={{ 
+                                    background: 'var(--danger)', 
+                                    color: '#fff', 
+                                    fontSize: '9px', 
+                                    padding: '1px 5px', 
+                                    borderRadius: '10px',
+                                    fontWeight: 800
+                                  }}>
+                                    {users.filter(u => u.role === 'MANAGER' && u.status === 'PENDING').length}
+                                  </span>
+                                )}
+                              </button>
                             </div>
 
-                            {/* Profitability indicators */}
-                            <div className="owner-metric-grid">
-                              <div className="owner-card">
-                                <span className="owner-card-title">Recettes Brutes</span>
-                                <div className="owner-card-value" style={{ color: 'var(--secondary)' }}>{ownerFinancials.revenue} F</div>
-                              </div>
-                              <div className="owner-card">
-                                <span className="owner-card-title">Coûts Boissons</span>
-                                <div className="owner-card-value" style={{ color: 'var(--danger)' }}>{ownerFinancials.cost} F</div>
-                              </div>
-                              <div className="owner-card" style={{ gridColumn: 'span 2' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <div>
-                                    <span className="owner-card-title">Bénéfice Net</span>
-                                    <div className="owner-card-value" style={{ color: 'var(--primary)' }}>{ownerFinancials.profit} F</div>
+                            {ownerTab === 'finances' ? (
+                              <>
+                                {/* Time Filters */}
+                                <div className="filter-tabs">
+                                  <button className={`filter-tab-btn ${ownerTimeFilter === 'JOUR' ? 'active' : ''}`} onClick={() => setOwnerTimeFilter('JOUR')}>Jour</button>
+                                  <button className={`filter-tab-btn ${ownerTimeFilter === 'SEMAINE' ? 'active' : ''}`} onClick={() => setOwnerTimeFilter('SEMAINE')}>Semaine</button>
+                                  <button className={`filter-tab-btn ${ownerTimeFilter === 'MOIS' ? 'active' : ''}`} onClick={() => setOwnerTimeFilter('MOIS')}>Mois</button>
+                                </div>
+
+                                {/* Profitability indicators */}
+                                <div className="owner-metric-grid">
+                                  <div className="owner-card">
+                                    <span className="owner-card-title">Recettes Brutes</span>
+                                    <div className="owner-card-value" style={{ color: 'var(--secondary)' }}>{ownerFinancials.revenue} F</div>
                                   </div>
-                                  <div style={{ background: 'rgba(217, 160, 91, 0.1)', color: 'var(--primary)', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>
-                                    {ownerFinancials.margin}% Marge
+                                  <div className="owner-card">
+                                    <span className="owner-card-title">Coûts Boissons</span>
+                                    <div className="owner-card-value" style={{ color: 'var(--danger)' }}>{ownerFinancials.cost} F</div>
+                                  </div>
+                                  <div className="owner-card" style={{ gridColumn: 'span 2' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <div>
+                                        <span className="owner-card-title">Bénéfice Net</span>
+                                        <div className="owner-card-value" style={{ color: 'var(--primary)' }}>{ownerFinancials.profit} F</div>
+                                      </div>
+                                      <div style={{ background: 'rgba(217, 160, 91, 0.1)', color: 'var(--primary)', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>
+                                        {ownerFinancials.margin}% Marge
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </div>
 
-                            {/* Config exclusive owner section */}
-                            <div className="glass-card" style={{ padding: '12px', marginBottom: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                              <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Settings size={12} /> Réglage USSD Exclusif
-                              </h5>
-                              <div className="input-group" style={{ marginBottom: '8px' }}>
-                                <label className="input-label" style={{ fontSize: '9px' }}>Modèle de code USSD</label>
-                                <input 
-                                  type="text" 
-                                  className="input-field" 
-                                  style={{ fontSize: '11px', padding: '6px', background: '#0a0a0f' }}
-                                  value={ussdTemplate}
-                                  onChange={(e) => setUssdTemplate(e.target.value)}
-                                />
-                              </div>
-                              <div style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: '1.3' }}>
-                                Variables : <code>[MONTANT]</code> et <code>[NUMERO_CLIENT]</code>.
-                              </div>
-                            </div>
-
-                            {/* Subscription Config Select */}
-                            <div className="glass-card" style={{ padding: '12px', background: 'rgba(217, 160, 91, 0.05)', borderColor: 'var(--primary)' }}>
-                              <label className="input-label" style={{ fontSize: '9px', marginBottom: '4px' }}>Formule d'Abonnement Actuelle</label>
-                              <select 
-                                className="input-field" 
-                                style={{ padding: '6px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}
-                                value={subscriptionTier}
-                                onChange={(e) => setSubscriptionTier(e.target.value)}
-                              >
-                                <option value="DECOUVERTE">Découverte (9 900 F / Max 10 serveuses)</option>
-                                <option value="ACCES">Accès (14 900 F / Max 50 serveuses)</option>
-                                <option value="PREMIUM">Premium (19 900 F / Illimité)</option>
-                              </select>
-                              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                Serveuses actives : <strong style={{ color: 'var(--text-primary)' }}>{activeWaitressesCount} / {activeWaitressLimit === Infinity ? 'Illimitée' : activeWaitressLimit}</strong>
-                              </div>
-                            </div>
-
-                            {/* WhatsApp daily report settings */}
-                            <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                              <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Send size={12} /> Rapport Automatique WhatsApp
-                              </h5>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                  <input 
-                                    type="checkbox" 
-                                    checked={whatsappEnabled} 
-                                    onChange={(e) => setWhatsappEnabled(e.target.checked)}
-                                    style={{ accentColor: 'var(--secondary)' }}
-                                  />
-                                  Activer l'envoi journalier à 00H00
-                                </label>
-                              </div>
-                              {whatsappEnabled && (
-                                <div className="input-group" style={{ marginBottom: '0px' }}>
-                                  <label className="input-label" style={{ fontSize: '9px' }}>Numéro WhatsApp</label>
-                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                {/* Config exclusive owner section */}
+                                <div className="glass-card" style={{ padding: '12px', marginBottom: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                                  <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Settings size={12} /> Réglage USSD Exclusif
+                                  </h5>
+                                  <div className="input-group" style={{ marginBottom: '8px' }}>
+                                    <label className="input-label" style={{ fontSize: '9px' }}>Modèle de code USSD</label>
                                     <input 
                                       type="text" 
                                       className="input-field" 
-                                      style={{ fontSize: '11px', padding: '4px 6px', background: '#0a0a0f', flex: 1 }}
-                                      value={whatsappNumber}
-                                      onChange={(e) => setWhatsappNumber(e.target.value)}
-                                      placeholder="+226 65 61 34 72"
+                                      style={{ fontSize: '11px', padding: '6px', background: '#0a0a0f' }}
+                                      value={ussdTemplate}
+                                      onChange={(e) => setUssdTemplate(e.target.value)}
                                     />
-                                    <button 
-                                      onClick={handleSendSimulatedWhatsAppReport}
-                                      className="btn btn-secondary" 
-                                      style={{ padding: '4px 8px', fontSize: '10px', borderColor: 'var(--secondary)', color: 'var(--secondary)' }}
-                                    >
-                                      Tester
-                                    </button>
+                                  </div>
+                                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                                    Variables : <code>[MONTANT]</code> et <code>[NUMERO_CLIENT]</code>.
                                   </div>
                                 </div>
-                              )}
-                              {whatsappSuccessMsg && (
-                                <div style={{ fontSize: '10px', color: 'var(--secondary)', marginTop: '6px', background: 'rgba(16, 185, 129, 0.05)', padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
-                                  {whatsappSuccessMsg}
-                                </div>
-                              )}
-                            </div>
 
-                            {/* Static Table QR Generator */}
-                            <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)', marginBottom: '12px' }}>
-                              <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <QrCode size={12} /> QR Code Statique de Table
-                              </h5>
-                              <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-                                <select 
-                                  className="input-field" 
-                                  style={{ flex: 1, padding: '4px 6px', fontSize: '11px', background: '#0a0a0f', borderColor: 'var(--border-color)' }}
-                                  value={qrTableNumber}
-                                  onChange={(e) => { setQrTableNumber(e.target.value); setGeneratedQr(null); }}
-                                >
-                                  <option value="Table 1">Table 1</option>
-                                  <option value="Table 2">Table 2</option>
-                                  <option value="Table 3">Table 3</option>
-                                  <option value="Table 4">Table 4</option>
-                                  <option value="Table 5">Table 5</option>
-                                  <option value="VIP 1">VIP 1</option>
-                                  <option value="VIP 2">VIP 2</option>
-                                  <option value="Comptoir">Comptoir</option>
-                                </select>
-                                <button 
-                                  onClick={handleGenerateQrSubmit}
-                                  className="btn btn-primary" 
-                                  style={{ padding: '4px 10px', fontSize: '11px' }}
-                                >
-                                  Générer
-                                </button>
-                              </div>
-
-                              {generatedQr && (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                  <svg width="60" height="60" viewBox="0 0 29 29" style={{ background: '#fff', padding: '4px', borderRadius: '4px' }}>
-                                    <path d="M0 0h7v7H0zm2 2v3h3V2zm0 15h3v3H0zm7 7h7v7H0zm2 2v3h3V24zm15-7h3v3h-3zm5-5h3v3h-3zm-5 5h3v3h-3zm10 5h3v3h-3zm-5 5h3v3h-3zm-5-15h3v3h-3zm0-10h7v7h-7zm2 2v3h3V2zm5 5h3v3h-3zm5-5h3v3h-3zm-5 5h3v3h-3zm5-5h3v3h-3z" fill="#0c0c10" />
-                                    <rect x="11" y="11" width="7" height="7" fill="var(--primary)" />
-                                  </svg>
-                                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--primary)' }}>{generatedQr}</span>
-                                  <p style={{ fontSize: '9px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>
-                                    QR Code statique à imprimer et coller sur la table.
-                                  </p>
-                                  <button 
-                                    onClick={handlePrintQr}
-                                    className="btn btn-secondary" 
-                                    style={{ padding: '2px 8px', fontSize: '9px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                {/* Subscription Config Select */}
+                                <div className="glass-card" style={{ padding: '12px', background: 'rgba(217, 160, 91, 0.05)', borderColor: 'var(--primary)' }}>
+                                  <label className="input-label" style={{ fontSize: '9px', marginBottom: '4px' }}>Formule d'Abonnement Actuelle</label>
+                                  <select 
+                                    className="input-field" 
+                                    style={{ padding: '6px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}
+                                    value={subscriptionTier}
+                                    onChange={(e) => setSubscriptionTier(e.target.value)}
                                   >
-                                    <Printer size={10} /> Imprimer
-                                  </button>
+                                    <option value="DECOUVERTE">Découverte (9 900 F / Max 10 serveuses)</option>
+                                    <option value="ACCES">Accès (14 900 F / Max 50 serveuses)</option>
+                                    <option value="PREMIUM">Premium (19 900 F / Illimité)</option>
+                                  </select>
+                                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                    Serveuses actives : <strong style={{ color: 'var(--text-primary)' }}>{activeWaitressesCount} / {activeWaitressLimit === Infinity ? 'Illimitée' : activeWaitressLimit}</strong>
+                                  </div>
                                 </div>
-                              )}
 
-                              {printSuccessMsg && (
-                                <div style={{ fontSize: '9px', color: 'var(--primary)', marginTop: '4px', textAlign: 'center' }}>
-                                  {printSuccessMsg}
+                                {/* WhatsApp daily report settings */}
+                                <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                                  <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Send size={12} /> Rapport Automatique WhatsApp
+                                  </h5>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                      <input 
+                                        type="checkbox" 
+                                        checked={whatsappEnabled} 
+                                        onChange={(e) => setWhatsappEnabled(e.target.checked)}
+                                        style={{ accentColor: 'var(--secondary)' }}
+                                      />
+                                      Activer l'envoi journalier à 00H00
+                                    </label>
+                                  </div>
+                                  {whatsappEnabled && (
+                                    <div className="input-group" style={{ marginBottom: '0px' }}>
+                                      <label className="input-label" style={{ fontSize: '9px' }}>Numéro WhatsApp</label>
+                                      <div style={{ display: 'flex', gap: '4px' }}>
+                                        <input 
+                                          type="text" 
+                                          className="input-field" 
+                                          style={{ fontSize: '11px', padding: '4px 6px', background: '#0a0a0f', flex: 1 }}
+                                          value={whatsappNumber}
+                                          onChange={(e) => setWhatsappNumber(e.target.value)}
+                                          placeholder="+226 65 61 34 72"
+                                        />
+                                        <button 
+                                          onClick={handleSendSimulatedWhatsAppReport}
+                                          className="btn btn-secondary" 
+                                          style={{ padding: '4px 8px', fontSize: '10px', borderColor: 'var(--secondary)', color: 'var(--secondary)' }}
+                                        >
+                                          Tester
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {whatsappSuccessMsg && (
+                                    <div style={{ fontSize: '10px', color: 'var(--secondary)', marginTop: '6px', background: 'rgba(16, 185, 129, 0.05)', padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+                                      {whatsappSuccessMsg}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+
+                                {/* Static Table QR Generator */}
+                                <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)', marginBottom: '12px' }}>
+                                  <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <QrCode size={12} /> QR Code Statique de Table
+                                  </h5>
+                                  <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                                    <select 
+                                      className="input-field" 
+                                      style={{ flex: 1, padding: '4px 6px', fontSize: '11px', background: '#0a0a0f', borderColor: 'var(--border-color)' }}
+                                      value={qrTableNumber}
+                                      onChange={(e) => { setQrTableNumber(e.target.value); setGeneratedQr(null); }}
+                                    >
+                                      <option value="Table 1">Table 1</option>
+                                      <option value="Table 2">Table 2</option>
+                                      <option value="Table 3">Table 3</option>
+                                      <option value="Table 4">Table 4</option>
+                                      <option value="Table 5">Table 5</option>
+                                      <option value="VIP 1">VIP 1</option>
+                                      <option value="VIP 2">VIP 2</option>
+                                      <option value="Comptoir">Comptoir</option>
+                                    </select>
+                                    <button 
+                                      onClick={handleGenerateQrSubmit}
+                                      className="btn btn-primary" 
+                                      style={{ padding: '4px 10px', fontSize: '11px' }}
+                                    >
+                                      Générer
+                                    </button>
+                                  </div>
+
+                                  {generatedQr && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                      <svg width="60" height="60" viewBox="0 0 29 29" style={{ background: '#fff', padding: '4px', borderRadius: '4px' }}>
+                                        <path d="M0 0h7v7H0zm2 2v3h3V2zm0 15h3v3H0zm7 7h7v7H0zm2 2v3h3V24zm15-7h3v3h-3zm5-5h3v3h-3zm-5 5h3v3h-3zm10 5h3v3h-3zm-5 5h3v3h-3zm-5-15h3v3h-3zm0-10h7v7h-7zm2 2v3h3V2zm5 5h3v3h-3zm5-5h3v3h-3zm-5 5h3v3h-3zm5-5h3v3h-3z" fill="#0c0c10" />
+                                        <rect x="11" y="11" width="7" height="7" fill="var(--primary)" />
+                                      </svg>
+                                      <span style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--primary)' }}>{generatedQr}</span>
+                                      <p style={{ fontSize: '9px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>
+                                        QR Code statique à imprimer et coller sur la table.
+                                      </p>
+                                      <button 
+                                        onClick={handlePrintQr}
+                                        className="btn btn-secondary" 
+                                        style={{ padding: '2px 8px', fontSize: '9px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                      >
+                                        <Printer size={10} /> Imprimer
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {printSuccessMsg && (
+                                    <div style={{ fontSize: '9px', color: 'var(--primary)', marginTop: '4px', textAlign: 'center' }}>
+                                      {printSuccessMsg}
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              /* TAB 2: GÉRANTS & ÉQUIPE (VALIDATION PAR LE PROPRIÉTAIRE) */
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {/* 1. Demandes Gérants en attente */}
+                                <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderColor: users.some(u => u.role === 'MANAGER' && u.status === 'PENDING') ? 'var(--secondary)' : 'rgba(255,255,255,0.08)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h5 style={{ margin: 0, fontSize: '12px', color: 'var(--secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <Users size={13} /> Gérants en Attente ({users.filter(u => u.role === 'MANAGER' && u.status === 'PENDING').length})
+                                    </h5>
+                                  </div>
+
+                                  {users.filter(u => u.role === 'MANAGER' && u.status === 'PENDING').length === 0 ? (
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                                      ✓ Aucun compte Gérant en attente d'approbation.
+                                    </p>
+                                  ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {users.filter(u => u.role === 'MANAGER' && u.status === 'PENDING').map(mgr => (
+                                        <div key={mgr.id} style={{ 
+                                          background: 'rgba(16, 185, 129, 0.06)', 
+                                          border: '1px solid rgba(16, 185, 129, 0.3)', 
+                                          borderRadius: '8px', 
+                                          padding: '10px',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '6px'
+                                        }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                              <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>{mgr.name}</div>
+                                              <div style={{ fontSize: '11px', color: 'var(--secondary)' }}>Tél : {mgr.phone}</div>
+                                            </div>
+                                            <span style={{ fontSize: '10px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                              En attente
+                                            </span>
+                                          </div>
+                                          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                            <button 
+                                              onClick={() => handleApproveManager(mgr.id)}
+                                              className="btn btn-emerald"
+                                              style={{ flex: 1, padding: '6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                            >
+                                              <Check size={13} /> Valider le Gérant
+                                            </button>
+                                            <button 
+                                              onClick={() => handleRejectManager(mgr.id)}
+                                              className="btn btn-danger"
+                                              style={{ padding: '6px 12px', fontSize: '11px' }}
+                                              title="Refuser"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* 2. Gérants Validés du Maquis */}
+                                <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.08)' }}>
+                                  <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <ShieldCheck size={13} /> Gérants Validés ({users.filter(u => u.role === 'MANAGER' && u.status === 'VALIDATED').length})
+                                  </h5>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {users.filter(u => u.role === 'MANAGER' && u.status === 'VALIDATED').map(mgr => (
+                                      <div key={mgr.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', opacity: mgr.is_active ? 1 : 0.6 }}>
+                                        <div>
+                                          <div style={{ fontWeight: 'bold', fontSize: '12px', textDecoration: mgr.is_active ? 'none' : 'line-through' }}>{mgr.name}</div>
+                                          <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Tél : {mgr.phone}</div>
+                                        </div>
+                                        <button 
+                                          onClick={() => handleToggleManagerActive(mgr.id)}
+                                          className="btn"
+                                          style={{
+                                            padding: '3px 8px',
+                                            fontSize: '10px',
+                                            borderColor: mgr.is_active ? 'var(--danger)' : 'var(--secondary)',
+                                            color: mgr.is_active ? 'var(--danger)' : 'var(--secondary)',
+                                            background: 'none',
+                                            borderWidth: '1px',
+                                            borderStyle: 'solid'
+                                          }}
+                                        >
+                                          {mgr.is_active ? 'Suspendre' : 'Réactiver'}
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* 3. Supervision Serveuses */}
+                                <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.08)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h5 style={{ margin: 0, fontSize: '12px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      🍹 Équipe Serveuses ({activeWaitressesCount} actives)
+                                    </h5>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                      {users.filter(u => u.role === 'WAITRESS' && u.status === 'PENDING').length} en attente
+                                    </span>
+                                  </div>
+                                  <p style={{ fontSize: '10px', color: 'var(--text-secondary)', margin: '0 0 8px 0', lineHeight: '1.4' }}>
+                                    Les serveuses sont validées au quotidien par les Gérants, mais vous pouvez également superviser ou débloquer une serveuse ici.
+                                  </p>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
+                                    {users.filter(u => u.role === 'WAITRESS').map(w => (
+                                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                                        <div>
+                                          <div style={{ fontWeight: 'bold', fontSize: '11px' }}>{w.name}</div>
+                                          <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Tél : {w.phone}</div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          <span style={{ 
+                                            fontSize: '9px', 
+                                            padding: '2px 5px', 
+                                            borderRadius: '4px', 
+                                            background: w.status === 'VALIDATED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                            color: w.status === 'VALIDATED' ? '#10b981' : '#f59e0b',
+                                            fontWeight: 700
+                                          }}>
+                                            {w.status === 'VALIDATED' ? 'Validée' : 'En attente'}
+                                          </span>
+                                          {w.status === 'PENDING' && (
+                                            <button 
+                                              onClick={() => handleApproveWaitress(w.id)}
+                                              className="btn btn-emerald"
+                                              style={{ padding: '2px 6px', fontSize: '9px' }}
+                                            >
+                                              Valider
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
 
                           </div>
 
@@ -2197,24 +2514,71 @@ export default function App() {
                       ) :
 
                       // ----------------------------------------------------
-                      // ROLE: SERVEUSE (WAITRESS) MOBILE VIEW (PENDING/SUSPENDED)
+                      // STATUS: PENDING (GÉRANT EN ATTENTE PROPRIÉTAIRE OU SERVEUSE EN ATTENTE GÉRANT)
                       // ----------------------------------------------------
-                      currentUser.role === 'WAITRESS' && currentUser.status === 'PENDING' ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                          <Clock size={40} style={{ color: 'var(--warning)', marginBottom: '12px', animation: 'pulse 2s infinite' }} />
-                          <h4 style={{ margin: '0 0 6px 0', fontSize: '15px' }}>Inscription En Attente</h4>
-                          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                            Bienvenue, <strong>{currentUser.name}</strong>.
-                          </p>
-                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                            Votre compte (Tél : {currentUser.phone}) est en attente de validation par le gérant.
-                          </p>
-                          <div className="glass-card" style={{ padding: '8px 10px', fontSize: '11px', borderColor: 'var(--warning)' }}>
-                            💡 Connectez-vous avec le compte Gérant (70222222) pour valider ce profil.
+                      currentUser.status === 'PENDING' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '16px 12px' }}>
+                          <div style={{ 
+                            width: '56px', 
+                            height: '56px', 
+                            borderRadius: '50%', 
+                            background: currentUser.role === 'MANAGER' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 160, 91, 0.12)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            marginBottom: '14px',
+                            border: `2px solid ${currentUser.role === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)'}`
+                          }}>
+                            <Clock size={28} style={{ color: currentUser.role === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)', animation: 'spin 8s linear infinite' }} />
                           </div>
-                          <button onClick={() => setLoggedInUserId(null)} className="btn btn-secondary" style={{ marginTop: '20px', padding: '8px 16px', fontSize: '12px' }}>
-                            Retour
-                          </button>
+
+                          <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
+                            {currentUser.role === 'MANAGER' ? 'Compte Gérant en Attente' : 'Compte Serveuse en Attente'}
+                          </h4>
+
+                          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            Bienvenue, <strong>{currentUser.name}</strong> !
+                          </p>
+
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.4' }}>
+                            Votre compte ({currentUser.phone}) est enregistré en tant que <strong>{currentUser.role === 'MANAGER' ? 'Gérant' : 'Serveuse'}</strong>.
+                          </p>
+
+                          <div className="glass-card" style={{ padding: '12px', borderRadius: '10px', fontSize: '11px', background: 'rgba(255,255,255,0.02)', borderColor: currentUser.role === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)', textAlign: 'left', marginBottom: '16px' }}>
+                            <div style={{ fontWeight: 700, color: currentUser.role === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {currentUser.role === 'MANAGER' ? '👑 Validation par le Propriétaire' : '💼 Validation par le Gérant'}
+                            </div>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '10px', lineHeight: '1.4' }}>
+                              {currentUser.role === 'MANAGER' 
+                                ? "Le Propriétaire de l'établissement doit approuver votre profil dans son onglet 'Gérants & Équipe' pour débloquer votre accès." 
+                                : "Le Gérant du maquis doit approuver votre profil dans son onglet 'Équipe' pour activer la caisse."}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                            <button 
+                              onClick={() => {
+                                const freshUser = users.find(u => u.id === currentUser.id);
+                                if (freshUser && freshUser.status === 'VALIDATED') {
+                                  alert('🎉 Félicitations ! Votre profil a été validé.');
+                                  setLoggedInUserId(currentUser.id);
+                                } else {
+                                  alert("⏳ Votre compte est toujours en attente de validation. Veuillez patienter ou contacter votre responsable.");
+                                }
+                              }} 
+                              className="btn btn-primary" 
+                              style={{ padding: '8px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            >
+                              <RefreshCw size={12} /> Actualiser le statut
+                            </button>
+                            <button 
+                              onClick={() => setLoggedInUserId(null)} 
+                              className="btn btn-secondary" 
+                              style={{ padding: '6px', fontSize: '11px' }}
+                            >
+                              Se Déconnecter
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         // Suspended waitress view
