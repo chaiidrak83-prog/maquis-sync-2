@@ -858,7 +858,7 @@ export default function App() {
                 variant="navbar" 
                 onLaunchApp={() => setViewMode('MOBILE_POS')} 
               />
-              {viewMode === 'MOBILE_POS' && (
+              {viewMode === 'MOBILE_POS' ? (
                 <button
                   onClick={() => setViewMode('LANDING')}
                   className="btn btn-secondary"
@@ -871,6 +871,26 @@ export default function App() {
                   }}
                 >
                   ← Retour au site
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
+                  className="btn btn-primary btn-pulse"
+                  style={{
+                    padding: '9px 20px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    border: 'none',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#ffffff',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✨ S'abonner (7j Gratuits)
                 </button>
               )}
             </div>
@@ -921,11 +941,27 @@ export default function App() {
           <p className="hero-desc">
             Prenez les commandes en 2 étapes sur mobile, suivez les stocks en direct et recevez votre bilan tous les soirs sur WhatsApp.
           </p>
-          <div className="hero-actions" style={{ display: 'flex', justifyContent: 'center' }}>
+          <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <PwaInstallButton 
               variant="hero" 
               onLaunchApp={() => setViewMode('MOBILE_POS')} 
             />
+            <button 
+              onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
+              className="btn btn-primary btn-lg"
+              style={{
+                background: 'linear-gradient(135deg, #F97316, #EA580C)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              ✨ S'abonner (7 Jours Gratuits)
+            </button>
           </div>
         </div>
       </section>
