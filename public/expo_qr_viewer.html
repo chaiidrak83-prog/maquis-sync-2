@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Expo Go (Tunnel 4G/Wi-Fi) - MaquisSync</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at top, #111827 0%, #030712 100%);
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      background: #1f2937;
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      border-radius: 24px;
+      padding: 36px 28px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(16, 185, 129, 0.2);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid #10b981;
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #9ca3af;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .qr-frame {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 20px;
+      display: inline-block;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      margin-bottom: 20px;
+    }
+    .qr-frame img {
+      width: 280px;
+      height: 280px;
+      display: block;
+      border-radius: 8px;
+    }
+    .url-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-family: ui-monospace, monospace;
+      color: #38bdf8;
+      font-size: 15px;
+      font-weight: 700;
+      word-break: break-all;
+      margin-bottom: 20px;
+    }
+    .instructions {
+      text-align: left;
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 4px solid #10b981;
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #e5e7eb;
+      line-height: 1.6;
+    }
+    .instructions ol {
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin-bottom: 6px;
+    }
+    .instructions li:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">🌐 TUNNEL 4G & WI-FI ACTIF</div>
+    <h1>Application Mobile MaquisSync</h1>
+    <p>Ce QR Code fonctionne sur <strong>tous les réseaux (4G, 5G, Wi-Fi)</strong> sans restriction.</p>
+    
+    <div class="qr-frame">
+      <img src="expo_qr.png" alt="QR Code Expo Go" />
+    </div>
+
+    <div class="url-box">
+      exp://holiday-chef-obviously-iso.trycloudflare.com
+    </div>
+
+    <div class="instructions">
+      <ol>
+        <li>Ouvrez l'application <strong>Expo Go</strong> sur votre smartphone.</li>
+        <li>Fonctionne en <strong>4G mobile</strong> ou en <strong>Wi-Fi</strong>.</li>
+        <li>Touchez <strong>« Scan QR code »</strong> et cadrez ce QR code.</li>
+      </ol>
+    </div>
+  </div>
+</body>
+</html>

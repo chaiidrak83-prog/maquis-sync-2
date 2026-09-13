@@ -25,3 +25,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+cloudflared.exe
+dist_check.txt
+.expo/
+*.tunnel_url.txt
+pwa_tunnel_url.txt
+tunnel_url.txt
+

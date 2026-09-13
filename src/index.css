@@ -513,11 +513,13 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border-color);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  justify-content: space-around;
   padding: 8px 4px;
 }
 .screen-nav-item {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -918,6 +920,24 @@ body {
   }
 }
 
+/* --- Touch Ergonomics & Safe Area Support --- */
+.btn,
+.keypad-btn,
+.selector-btn,
+.screen-nav-item,
+.mngr-nav-item {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.keypad-btn {
+  min-height: 52px;
+}
+
+.screen-nav-item {
+  min-height: 48px;
+}
+
 /* --- Support rotation paysage sur mobile (hauteur réduite) --- */
 @media (orientation: landscape) and (max-height: 500px) {
   .hero-section {
@@ -944,10 +964,72 @@ body {
     padding: 40px 0;
   }
   .device-frame {
-    max-height: 280px;
+    max-height: 85vh;
+    aspect-ratio: auto;
   }
   .device-container {
-    max-width: 300px;
+    max-width: 480px;
+  }
+  .screen-content {
+    max-height: calc(85vh - 54px);
+    overflow-y: auto;
+  }
+  .pin-pad {
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .keypad-btn {
+    padding: 8px 0;
+    min-height: 40px;
+    font-size: 15px;
+  }
+}
+
+/* --- Mode PWA Standalone ou Plein Écran Mobile Dédié --- */
+@media (display-mode: standalone) {
+  body {
+    background-image: none;
+    background-color: var(--bg-main);
+  }
+  .site-header {
+    display: none !important;
+  }
+  .hero-section,
+  .features-section,
+  #features-detail,
+  .pricing-section,
+  .site-footer,
+  .simulation-guide-col {
+    display: none !important;
+  }
+  .demo-section {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  .demo-grid {
+    display: block !important;
+  }
+  .device-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+  .device-frame {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    aspect-ratio: auto !important;
+  }
+  .screen-header {
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+  .screen-nav {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 }
 

@@ -42,11 +42,14 @@ import {
   FileText,
   Send,
   Printer,
-  ShieldCheck
+  ShieldCheck,
+  Ticket
 } from 'lucide-react';
 import SuperAdminConsole from './components/SuperAdminConsole';
 import AdminLoginScreen from './components/AdminLoginScreen';
 import OnboardingModal from './components/OnboardingModal';
+import PwaInstallButton from './components/PwaInstallButton';
+import CreditsConsignmentsModal from './components/CreditsConsignmentsModal';
 
 export default function App() {
   // --- Simulation & Database Global States ---
@@ -62,14 +65,22 @@ export default function App() {
   const [secretWebTaps, setSecretWebTaps] = useState([]);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [onboardingInitialPlan, setOnboardingInitialPlan] = useState('Accès');
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
 
-  // Écoute de l'URL cachée #boss-admin ou /boss-admin
+  // Écoute de l'URL cachée #boss-admin ou lancement direct PWA autonome
   useEffect(() => {
     const handleUrlCheck = () => {
       const hash = window.location.hash;
       const path = window.location.pathname;
+      const search = new URLSearchParams(window.location.search);
+      const host = window.location.hostname.toLowerCase();
+      const isSubdomain = host.startsWith('app.') || host.startsWith('pos.') || host.startsWith('caisse.') || host.startsWith('pwa.');
+      const isPwa = search.get('source') === 'pwa' || window.matchMedia('(display-mode: standalone)').matches || isSubdomain;
+
       if (hash === '#boss-admin' || hash === '#/boss-admin' || path === '/boss-admin') {
         setViewMode('BOSS_ADMIN');
+      } else if (isPwa || hash === '#pos' || hash === '#app') {
+        setViewMode('MOBILE_POS');
       }
     };
     handleUrlCheck();
@@ -779,6 +790,10 @@ export default function App() {
             </nav>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <PwaInstallButton 
+                variant="navbar" 
+                onLaunchApp={() => setViewMode('MOBILE_POS')} 
+              />
               {viewMode === 'MOBILE_POS' ? (
                 <button
                   onClick={() => setViewMode('LANDING')}
@@ -863,11 +878,15 @@ export default function App() {
             Prenez les commandes en 2 étapes sur mobile, suivez les stocks en direct et recevez votre bilan tous les soirs sur WhatsApp.
           </p>
           <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <PwaInstallButton 
+              variant="hero" 
+              onLaunchApp={() => setViewMode('MOBILE_POS')} 
+            />
             <button 
               onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
-              className="btn btn-primary btn-lg btn-pulse"
+              className="btn btn-primary btn-lg"
               style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                background: 'linear-gradient(135deg, #F97316, #EA580C)',
                 color: '#ffffff',
                 border: 'none',
                 fontWeight: 800,
@@ -1143,6 +1162,28 @@ export default function App() {
                       ⚡ MAQUISYNC MOBILE
                     </span>
                     <div className="status-bar-indicators" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {loggedInUserId && (
+                        <button 
+                          onClick={() => setShowCreditsModal(true)} 
+                          style={{ 
+                            background: 'rgba(16, 185, 129, 0.15)', 
+                            border: '1px solid rgba(16, 185, 129, 0.4)', 
+                            borderRadius: '6px', 
+                            color: '#10b981', 
+                            cursor: 'pointer', 
+                            padding: '2px 6px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '4px', 
+                            fontSize: '10px', 
+                            fontWeight: 700 
+                          }}
+                          title="Avoirs & Consignations (SMS Gratuit)"
+                        >
+                          <Ticket size={12} />
+                          <span>Avoirs</span>
+                        </button>
+                      )}
                       <button 
                         onClick={() => setShowMobileContactModal(true)} 
                         style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -1621,6 +1662,13 @@ export default function App() {
                               >
                                 Stocks
                               </button>
+                              <button 
+                                onClick={() => setShowCreditsModal(true)} 
+                                style={{ flex: 1.1, background: 'rgba(16, 185, 129, 0.1)', border: 'none', borderRadius: '6px', color: '#10B981', fontSize: '11px', padding: '4px 6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}
+                              >
+                                <Ticket size={12} />
+                                <span>Avoirs</span>
+                              </button>
                             </div>
 
                             {/* Tab CONTENT: Waitresses approval queue & active team */}
@@ -2020,6 +2068,27 @@ export default function App() {
                                       >
                                         📲 Mobile Money
                                       </button>
+                                      <button 
+                                        type="button"
+                                        className="btn btn-secondary" 
+                                        style={{ 
+                                          gridColumn: 'span 2', 
+                                          padding: '8px', 
+                                          fontSize: '11px', 
+                                          borderColor: '#10b981', 
+                                          color: '#10b981',
+                                          background: 'rgba(16, 185, 129, 0.05)',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          gap: '6px',
+                                          cursor: 'pointer'
+                                        }}
+                                        onClick={() => setShowCreditsModal(true)}
+                                      >
+                                        <Ticket size={13} />
+                                        <span>Créer Avoir / Consigner Boisson (SMS 0 FCFA)</span>
+                                      </button>
                                     </div>
 
                                     <button 
@@ -2110,6 +2179,10 @@ export default function App() {
                             <button className={`screen-nav-item ${waitressTab === 'commande' ? 'active' : ''}`} onClick={() => setWaitressTab('commande')}>
                               <ShoppingBag size={16} />
                               Vendre
+                            </button>
+                            <button className="screen-nav-item" onClick={() => setShowCreditsModal(true)}>
+                              <Ticket size={16} style={{ color: '#10B981' }} />
+                              Avoirs
                             </button>
                             <button className={`screen-nav-item ${waitressTab === 'pointage' ? 'active' : ''}`} onClick={() => setWaitressTab('pointage')}>
                               <QrCode size={16} />
@@ -2387,6 +2460,21 @@ export default function App() {
         onActivated={({ nomMaquis, phone, plan }) => {
           setLoggedInUserId('u1');
           setViewMode('MOBILE_POS');
+        }}
+      />
+
+      {/* MODAL GESTION DES AVOIRS & CONSIGNATIONS VIA PASSERELLE GSM LOCALE */}
+      <CreditsConsignmentsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        establishmentId={establishmentId}
+        establishmentName={impersonatedEstablishment?.name || "MaquisSync"}
+        currentUser={currentUser}
+        products={products}
+        onStockDeduct={(productId, qty) => {
+          setProducts(prev => prev.map(p => 
+            p.id === productId ? { ...p, current_stock: Math.max(0, p.current_stock - qty) } : p
+          ));
         }}
       />
     </div>
