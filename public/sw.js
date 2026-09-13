@@ -1,5 +1,5 @@
 // MaquisSync Offline-First Service Worker
-const CACHE_NAME = 'maquissync-v2';
+const CACHE_NAME = 'maquissync-v3';
 const STATIC_ASSETS = [
   '/',
   '/app',
@@ -23,13 +23,21 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: Clean up old cache versions and take control of all clients
+// Message: Allow client to trigger skipWaiting
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Activate: Clean up old cache versions and immediately take control of all clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Purge ancien cache obsolète:', key);
             return caches.delete(key);
           }
         })
@@ -38,10 +46,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Offline-First strategy
-// 1. Static assets & build files (.js, .css, images, fonts): CacheFirst with Stale-While-Revalidate
-// 2. Navigation (HTML pages): NetworkFirst with offline cache fallback
-// 3. API calls: NetworkFirst with offline fallback
+// Fetch: Offline-First strategy with NetworkFirst priority for active code
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -51,7 +56,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // A. Navigation (HTML requests)
+  // Bypass cache completely for localhost / dev server
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return;
+  }
+
+  // A. Navigation (HTML requests) : NetworkFirst
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -62,12 +72,12 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match('/index.html') || caches.match('/'))
+        .catch(() => caches.match('/index.html') || caches.match('/app') || caches.match('/'))
     );
     return;
   }
 
-  // B. Static assets (JS, CSS, Images, Fonts)
+  // B. Static assets (JS, CSS, Images, Fonts) : NetworkFirst with cache fallback
   const isStatic = 
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css') ||
@@ -80,25 +90,15 @@ self.addEventListener('fetch', (event) => {
 
   if (isStatic) {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          // Stale-While-Revalidate in the background
-          fetch(request).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
-            }
-          }).catch(() => {});
-          return cachedResponse;
-        }
-
-        return fetch(request).then((networkResponse) => {
+      fetch(request)
+        .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
           }
           return networkResponse;
-        });
-      })
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }
