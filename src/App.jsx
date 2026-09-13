@@ -6,7 +6,8 @@ import {
   staffService, 
   attendanceService, 
   establishmentService,
-  userService 
+  userService,
+  orderAuditService
 } from './services/api';
 import { 
   Wifi, 
@@ -44,13 +45,23 @@ import {
   Send,
   Printer,
   ShieldCheck,
-  Ticket
+  Ticket,
+  MapPin,
+  Edit3,
+  ShieldAlert,
+  Eye,
+  Maximize
 } from 'lucide-react';
 import SuperAdminConsole from './components/SuperAdminConsole';
 import AdminLoginScreen from './components/AdminLoginScreen';
 import OnboardingModal from './components/OnboardingModal';
 import PwaInstallButton from './components/PwaInstallButton';
 import CreditsConsignmentsModal from './components/CreditsConsignmentsModal';
+import WebQrScanner from './components/WebQrScanner';
+import VisualCatalogPos from './components/VisualCatalogPos';
+import OrderEditModal from './components/OrderEditModal';
+import OwnerQrGeneratorModal from './components/OwnerQrGeneratorModal';
+import SimplifiedDashboard from './components/SimplifiedDashboard';
 
 export default function App() {
   // --- Simulation & Database Global States ---
@@ -140,19 +151,76 @@ export default function App() {
     { id: 'p4', name: 'Laafi (Eau)', volume: '1.5L', price: 500, initial_stock: 4, current_stock: 4, image_base64: drinkImages.water_blue, is_active: true },
   ]);
 
-  // Sales (Transactions)
+  // Sales (Transactions avec détail articles et statut)
   const [sales, setSales] = useState([
-    { id: 's1', user_id: 'w1', waitress_name: 'Awa Diallo', total_amount: 3800, payment_method: 'CASH', created_at: new Date(Date.now() - 3600000).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}), is_synced: true },
-    { id: 's2', user_id: 'w1', waitress_name: 'Awa Diallo', total_amount: 1000, payment_method: 'MOBILE_MONEY', created_at: new Date(Date.now() - 1800000).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}), is_synced: true },
+    { 
+      id: 's1', 
+      user_id: 'w1', 
+      waitress_name: 'Awa Diallo', 
+      total_amount: 3800, 
+      payment_method: 'CASH', 
+      status: 'COMPLETED',
+      created_at: new Date(Date.now() - 3600000).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}), 
+      is_synced: true,
+      items: [
+        { productId: 'p1', name: 'Brakina', unitPrice: 900, quantity: 2 },
+        { productId: 'p2', name: 'Sobebra', unitPrice: 1000, quantity: 2 }
+      ]
+    },
+    { 
+      id: 's2', 
+      user_id: 'w1', 
+      waitress_name: 'Awa Diallo', 
+      total_amount: 1000, 
+      payment_method: 'MOBILE_MONEY', 
+      status: 'COMPLETED',
+      created_at: new Date(Date.now() - 1800000).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}), 
+      is_synced: true,
+      items: [
+        { productId: 'p2', name: 'Sobebra', unitPrice: 1000, quantity: 1 }
+      ]
+    },
   ]);
 
   // Sync Queue for Offline sales
   const [offlineSyncQueue, setOfflineSyncQueue] = useState([]);
 
-  // Attendance shifts logs
+  // Attendance shifts logs avec coordonnées GPS
   const [attendances, setAttendances] = useState([
-    { id: 'a1', waitress_name: 'Awa Diallo', check_in: '18:30', check_out: null, method: 'QR_CODE' }
+    { 
+      id: 'a1', 
+      waitress_name: 'Awa Diallo', 
+      check_in: '18:30', 
+      check_out: null, 
+      method: 'QR_CODE',
+      latitude: 12.3714,
+      longitude: -1.5197,
+      accuracy: 12,
+      location_status: 'GPS_VALIDATED'
+    }
   ]);
+
+  // Journal d'Audit des modifications de commandes par le gérant
+  const [orderAuditLogs, setOrderAuditLogs] = useState([
+    {
+      id: 'log1',
+      sale_id: 's1',
+      manager_name: 'Koffi Mensah',
+      action: 'MODIFIED',
+      reason: 'Erreur de saisie serveuse',
+      old_total: 4700,
+      new_total: 3800,
+      created_at: new Date(Date.now() - 3600000).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})
+    }
+  ]);
+
+  // Commandes & Modales
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [showWebQrScanner, setShowWebQrScanner] = useState(false);
+  const [showOwnerQrModal, setShowOwnerQrModal] = useState(false);
+  const [isSimplifiedDashboard, setIsSimplifiedDashboard] = useState(false);
+  const [posVisualMode, setPosVisualMode] = useState(true); // Mode Caisse Visuelle par défaut pour les serveuses
+  const [gpsStatusMessage, setGpsStatusMessage] = useState('');
 
   // --- Mobile Application Simulator States ---
   const [loggedInUserId, setLoggedInUserId] = useState(null); // Initial state: logged out
@@ -168,7 +236,7 @@ export default function App() {
   const [regPinInput, setRegPinInput] = useState('');
 
   // --- Owner (Propriétaire) View States ---
-  const [ownerTab, setOwnerTab] = useState('finances'); // 'finances' | 'team'
+  const [ownerTab, setOwnerTab] = useState('finances'); // 'finances' | 'team' | 'audit'
   const [ownerTimeFilter, setOwnerTimeFilter] = useState('JOUR'); // 'JOUR' | 'SEMAINE' | 'MOIS'
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState('+226 76 00 00 00');
@@ -179,7 +247,7 @@ export default function App() {
   const [showMobileContactModal, setShowMobileContactModal] = useState(false);
 
   // --- Gérant (Manager) App Interface States ---
-  const [gerantTab, setGerantTab] = useState('validation'); // 'validation' | 'catalogue' | 'presences' | 'stocks'
+  const [gerantTab, setGerantTab] = useState('commandes'); // 'commandes' | 'validation' | 'catalogue' | 'presences' | 'stocks'
   
   // Product Creation inside Manager View
   const [newProductName, setNewProductName] = useState('');
@@ -524,14 +592,26 @@ export default function App() {
 
   const finalizeSale = (method) => {
     const saleId = 's_' + Date.now();
+    const saleItems = Object.entries(cart).map(([productId, quantity]) => {
+      const product = products.find(p => p.id === productId);
+      return {
+        productId,
+        name: product ? product.name : 'Boisson',
+        quantity,
+        unitPrice: product ? product.price : 0
+      };
+    });
+
     const newSale = {
       id: saleId,
       user_id: currentUser?.id || 'offline_waitress',
       waitress_name: currentUser?.name || 'Serveuse Locale',
       total_amount: cartTotal,
       payment_method: method,
+      status: 'COMPLETED',
       created_at: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
-      is_synced: isOnline
+      is_synced: isOnline,
+      items: saleItems
     };
 
     // Update stock levels locally
@@ -545,14 +625,6 @@ export default function App() {
     if (isOnline) {
       setSales(prev => [newSale, ...prev]);
       if (isSupabaseConfigured()) {
-        const saleItems = Object.entries(cart).map(([productId, quantity]) => {
-          const product = products.find(p => p.id === productId);
-          return {
-            productId,
-            quantity,
-            unitPrice: product ? product.price : 0
-          };
-        });
         salesService.createSale({
           establishmentId,
           userId: currentUser?.id && currentUser.id.length > 20 ? currentUser.id : null,
@@ -573,33 +645,232 @@ export default function App() {
     setCustomerPhone('');
   };
 
-  // QR pointage simulation
-  const handleQRScan = () => {
-    if (!currentUser) return;
-    setIsScanning(true);
-    setTimeout(() => {
-      setIsScanning(false);
-      const isCheckingIn = !attendances.some(a => a.waitress_name === currentUser.name && a.check_out === null);
-      const timeStr = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-      
-      if (isCheckingIn) {
-        setAttendances(prev => [
-          { id: 'a_' + Date.now(), waitress_name: currentUser.name, check_in: timeStr, check_out: null, method: 'QR_CODE' },
-          ...prev
-        ]);
-        setScanMessage(`Arrivée enregistrée : ${timeStr}`);
-      } else {
-        setAttendances(prev => prev.map(a => {
-          if (a.waitress_name === currentUser.name && a.check_out === null) {
-            return { ...a, check_out: timeStr };
-          }
-          return a;
-        }));
-        setScanMessage(`Départ enregistré : ${timeStr}`);
-      }
+  // --- Pointage avec Géolocalisation Standard W3C et Scan QR Réel ---
+  const handleStartQrScan = () => {
+    setShowWebQrScanner(true);
+  };
 
-      setTimeout(() => setScanMessage(''), 3000);
-    }, 1500);
+  const handleProcessQrScan = (scannedCode) => {
+    setShowWebQrScanner(false);
+    if (!currentUser) return;
+
+    setScanMessage("📡 Vérification de la géolocalisation GPS...");
+
+    // Utilisation de l'API standard W3C navigator.geolocation
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = parseFloat(position.coords.latitude.toFixed(6));
+          const lng = parseFloat(position.coords.longitude.toFixed(6));
+          const acc = Math.round(position.coords.accuracy);
+          executeAttendanceCheck(scannedCode, {
+            latitude: lat,
+            longitude: lng,
+            accuracy: acc,
+            location_status: 'GPS_VALIDATED'
+          });
+        },
+        (error) => {
+          console.warn("Géolocalisation non obtenue:", error.message);
+          executeAttendanceCheck(scannedCode, {
+            latitude: null,
+            longitude: null,
+            accuracy: null,
+            location_status: 'GPS_REFUSED'
+          });
+        },
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+      );
+    } else {
+      executeAttendanceCheck(scannedCode, {
+        latitude: null,
+        longitude: null,
+        accuracy: null,
+        location_status: 'GPS_NOT_SUPPORTED'
+      });
+    }
+  };
+
+  const executeAttendanceCheck = (scannedCode, geoData) => {
+    const isCheckingIn = !attendances.some(a => a.waitress_name === currentUser.name && a.check_out === null);
+    const timeStr = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+    const geoSummary = geoData.accuracy ? ` (GPS ±${geoData.accuracy}m)` : '';
+
+    if (isCheckingIn) {
+      const newAtt = {
+        id: 'a_' + Date.now(),
+        waitress_name: currentUser.name,
+        check_in: timeStr,
+        check_out: null,
+        method: 'QR_CODE',
+        ...geoData
+      };
+      setAttendances(prev => [newAtt, ...prev]);
+      setScanMessage(`✓ Arrivée enregistrée : ${timeStr}${geoSummary}`);
+
+      if (isOnline && isSupabaseConfigured()) {
+        attendanceService.checkIn({
+          establishmentId,
+          userId: currentUser?.id && currentUser.id.length > 20 ? currentUser.id : null,
+          method: 'QR_CODE',
+          latitude: geoData.latitude,
+          longitude: geoData.longitude,
+          accuracy: geoData.accuracy,
+          locationStatus: geoData.location_status
+        }).catch(err => console.warn('Supabase attendance check-in error:', err));
+      }
+    } else {
+      const activeAtt = attendances.find(a => a.waitress_name === currentUser.name && a.check_out === null);
+      setAttendances(prev => prev.map(a => {
+        if (a.waitress_name === currentUser.name && a.check_out === null) {
+          return { ...a, check_out: timeStr };
+        }
+        return a;
+      }));
+      setScanMessage(`✓ Départ enregistré : ${timeStr}${geoSummary}`);
+
+      if (isOnline && isSupabaseConfigured() && activeAtt?.id && activeAtt.id.length > 20) {
+        attendanceService.checkOut(activeAtt.id).catch(err => console.warn('Supabase checkout error:', err));
+      }
+    }
+
+    setTimeout(() => setScanMessage(''), 4500);
+  };
+
+  // --- Gestionnaire de modification de commande par le Gérant ---
+  const handleSaveOrderEdit = async (editData) => {
+    // 1. Mise à jour dans l'état local sales
+    setSales(prev => prev.map(s => {
+      if (s.id === editData.orderId) {
+        return {
+          ...s,
+          total_amount: editData.newTotal,
+          payment_method: editData.paymentMethod,
+          status: 'MODIFIED',
+          items: editData.items,
+          modified_by: editData.managerName,
+          modified_at: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+          edit_reason: editData.reason
+        };
+      }
+      return s;
+    }));
+
+    // 2. Réconciliation automatique des stocks
+    if (editData.stockReconciliation) {
+      setProducts(prev => prev.map(p => {
+        const delta = editData.stockReconciliation[p.id];
+        if (delta !== undefined && delta !== 0) {
+          return { ...p, current_stock: Math.max(0, p.current_stock + delta) };
+        }
+        return p;
+      }));
+    }
+
+    // 3. Enregistrement dans le journal d'audit log
+    const newLog = {
+      id: 'log_' + Date.now(),
+      sale_id: editData.orderId,
+      manager_name: editData.managerName,
+      action: 'MODIFIED',
+      reason: editData.reason,
+      old_total: editData.oldTotal,
+      new_total: editData.newTotal,
+      created_at: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+      details: { items: editData.items }
+    };
+    setOrderAuditLogs(prev => [newLog, ...prev]);
+
+    // 4. Synchronisation Supabase si en ligne
+    if (isOnline && isSupabaseConfigured()) {
+      try {
+        await salesService.updateSale({
+          saleId: editData.orderId,
+          establishmentId,
+          totalAmount: editData.newTotal,
+          paymentMethod: editData.paymentMethod,
+          status: 'MODIFIED',
+          items: editData.items
+        });
+        await orderAuditService.createLog({
+          establishmentId,
+          saleId: editData.orderId,
+          managerId: currentUser?.id,
+          managerName: editData.managerName,
+          action: 'MODIFIED',
+          reason: editData.reason,
+          oldTotal: editData.oldTotal,
+          newTotal: editData.newTotal,
+          details: { items: editData.items }
+        });
+      } catch (err) {
+        console.warn('Sync modification commande Supabase:', err);
+      }
+    }
+
+    setEditingOrder(null);
+  };
+
+  // --- Gestionnaire d'annulation intégrale de commande par le Gérant ---
+  const handleCancelOrder = async (cancelData) => {
+    // 1. Mise à jour de l'état local sales en 'CANCELLED'
+    setSales(prev => prev.map(s => {
+      if (s.id === cancelData.orderId) {
+        return {
+          ...s,
+          status: 'CANCELLED',
+          cancelled_by: cancelData.managerName,
+          cancelled_at: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+          cancel_reason: cancelData.reason
+        };
+      }
+      return s;
+    }));
+
+    // 2. Réintégration intégrale des bouteilles au stock
+    if (cancelData.stockReconciliation) {
+      setProducts(prev => prev.map(p => {
+        const restoreQty = cancelData.stockReconciliation[p.id];
+        if (restoreQty !== undefined && restoreQty > 0) {
+          return { ...p, current_stock: p.current_stock + restoreQty };
+        }
+        return p;
+      }));
+    }
+
+    // 3. Enregistrement dans le journal d'audit log
+    const cancelLog = {
+      id: 'log_' + Date.now(),
+      sale_id: cancelData.orderId,
+      manager_name: cancelData.managerName,
+      action: 'CANCELLED',
+      reason: cancelData.reason,
+      old_total: cancelData.oldTotal,
+      new_total: 0,
+      created_at: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+    };
+    setOrderAuditLogs(prev => [cancelLog, ...prev]);
+
+    // 4. Synchronisation Supabase
+    if (isOnline && isSupabaseConfigured()) {
+      try {
+        await salesService.cancelSale({ saleId: cancelData.orderId, reason: cancelData.reason });
+        await orderAuditService.createLog({
+          establishmentId,
+          saleId: cancelData.orderId,
+          managerId: currentUser?.id,
+          managerName: cancelData.managerName,
+          action: 'CANCELLED',
+          reason: cancelData.reason,
+          oldTotal: cancelData.oldTotal,
+          newTotal: 0
+        });
+      } catch (err) {
+        console.warn('Sync annulation commande Supabase:', err);
+      }
+    }
+
+    setEditingOrder(null);
   };
 
   // Simulated WhatsApp daily report
@@ -1591,61 +1862,101 @@ export default function App() {
                         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                           <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                              <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>Vue Propriétaire</h4>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>Vue Propriétaire</h4>
+                                <button 
+                                  onClick={() => setIsSimplifiedDashboard(!isSimplifiedDashboard)} 
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '3px 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: isSimplifiedDashboard ? 'var(--primary)' : 'rgba(255,255,255,0.1)', color: isSimplifiedDashboard ? 'var(--primary)' : '#cbd5e1' }}
+                                >
+                                  <Layers size={11} /> {isSimplifiedDashboard ? 'Vue Détaillée' : 'Vue Simplifiée ⚡'}
+                                </button>
+                              </div>
                               <button onClick={() => setLoggedInUserId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><LogOut size={16} /></button>
                             </div>
 
-                            {/* Owner Navigation Tabs */}
-                            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '12px' }}>
-                              <button 
-                                onClick={() => setOwnerTab('finances')} 
-                                style={{ 
-                                  flex: 1, 
-                                  background: 'none', 
-                                  border: 'none', 
-                                  borderBottom: ownerTab === 'finances' ? '2px solid var(--primary)' : 'none', 
-                                  color: ownerTab === 'finances' ? 'var(--primary)' : 'var(--text-muted)', 
-                                  fontSize: '11px', 
-                                  paddingBottom: '8px', 
-                                  fontWeight: 'bold', 
-                                  cursor: 'pointer' 
-                                }}
-                              >
-                                📊 Finances & Réglages
-                              </button>
-                              <button 
-                                onClick={() => setOwnerTab('team')} 
-                                style={{ 
-                                  flex: 1.1, 
-                                  background: 'none', 
-                                  border: 'none', 
-                                  borderBottom: ownerTab === 'team' ? '2px solid var(--primary)' : 'none', 
-                                  color: ownerTab === 'team' ? 'var(--primary)' : 'var(--text-muted)', 
-                                  fontSize: '11px', 
-                                  paddingBottom: '8px', 
-                                  fontWeight: 'bold', 
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px'
-                                }}
-                              >
-                                <span>👥 Gérants & Équipe</span>
-                                {users.some(u => u.role === 'MANAGER' && u.status === 'PENDING') && (
-                                  <span style={{ 
-                                    background: 'var(--danger)', 
-                                    color: '#fff', 
-                                    fontSize: '9px', 
-                                    padding: '1px 5px', 
-                                    borderRadius: '10px',
-                                    fontWeight: 800
-                                  }}>
-                                    {users.filter(u => u.role === 'MANAGER' && u.status === 'PENDING').length}
-                                  </span>
-                                )}
-                              </button>
-                            </div>
+                            {isSimplifiedDashboard ? (
+                              <SimplifiedDashboard 
+                                sales={sales} 
+                                products={products} 
+                                users={users} 
+                                attendances={attendances} 
+                                onSwitchToDetailed={() => setIsSimplifiedDashboard(false)} 
+                              />
+                            ) : (
+                              <>
+                                {/* Owner Navigation Tabs */}
+                                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '12px' }}>
+                                  <button 
+                                    onClick={() => setOwnerTab('finances')} 
+                                    style={{ 
+                                      flex: 1, 
+                                      background: 'none', 
+                                      border: 'none', 
+                                      borderBottom: ownerTab === 'finances' ? '2px solid var(--primary)' : 'none', 
+                                      color: ownerTab === 'finances' ? 'var(--primary)' : 'var(--text-muted)', 
+                                      fontSize: '11px', 
+                                      paddingBottom: '8px', 
+                                      fontWeight: 'bold', 
+                                      cursor: 'pointer' 
+                                    }}
+                                  >
+                                    📊 Finances
+                                  </button>
+                                  <button 
+                                    onClick={() => setOwnerTab('team')} 
+                                    style={{ 
+                                      flex: 1.1, 
+                                      background: 'none', 
+                                      border: 'none', 
+                                      borderBottom: ownerTab === 'team' ? '2px solid var(--primary)' : 'none', 
+                                      color: ownerTab === 'team' ? 'var(--primary)' : 'var(--text-muted)', 
+                                      fontSize: '11px', 
+                                      paddingBottom: '8px', 
+                                      fontWeight: 'bold', 
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    <span>👥 Équipe</span>
+                                    {users.some(u => u.role === 'MANAGER' && u.status === 'PENDING') && (
+                                      <span style={{ 
+                                        background: 'var(--danger)', 
+                                        color: '#fff', 
+                                        fontSize: '9px', 
+                                        padding: '1px 5px', 
+                                        borderRadius: '10px',
+                                        fontWeight: 800
+                                      }}>
+                                        {users.filter(u => u.role === 'MANAGER' && u.status === 'PENDING').length}
+                                      </span>
+                                    )}
+                                  </button>
+                                  <button 
+                                    onClick={() => setOwnerTab('audit')} 
+                                    style={{ 
+                                      flex: 1.1, 
+                                      background: 'none', 
+                                      border: 'none', 
+                                      borderBottom: ownerTab === 'audit' ? '2px solid var(--primary)' : 'none', 
+                                      color: ownerTab === 'audit' ? 'var(--primary)' : 'var(--text-muted)', 
+                                      fontSize: '11px', 
+                                      paddingBottom: '8px', 
+                                      fontWeight: 'bold', 
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    <ShieldAlert size={12} />
+                                    <span>Audit ({orderAuditLogs.length})</span>
+                                  </button>
+                                </div>
 
                             {ownerTab === 'finances' ? (
                               <>
@@ -1762,64 +2073,79 @@ export default function App() {
                                   )}
                                 </div>
 
-                                {/* Static Table QR Generator */}
-                                <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)', marginBottom: '12px' }}>
-                                  <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <QrCode size={12} /> QR Code Statique de Table
-                                  </h5>
-                                  <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-                                    <select 
-                                      className="input-field" 
-                                      style={{ flex: 1, padding: '4px 6px', fontSize: '11px', background: '#0a0a0f', borderColor: 'var(--border-color)' }}
-                                      value={qrTableNumber}
-                                      onChange={(e) => { setQrTableNumber(e.target.value); setGeneratedQr(null); }}
-                                    >
-                                      <option value="Table 1">Table 1</option>
-                                      <option value="Table 2">Table 2</option>
-                                      <option value="Table 3">Table 3</option>
-                                      <option value="Table 4">Table 4</option>
-                                      <option value="Table 5">Table 5</option>
-                                      <option value="VIP 1">VIP 1</option>
-                                      <option value="VIP 2">VIP 2</option>
-                                      <option value="Comptoir">Comptoir</option>
-                                    </select>
+                                  {/* Générateur de QR Code Officiel d'Établissement */}
+                                  <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(217, 160, 91, 0.25)', marginBottom: '12px' }}>
+                                    <h5 style={{ margin: '0 0 6px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <QrCode size={13} /> QR Code Officiel Établissement
+                                    </h5>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 10px 0', lineHeight: 1.3 }}>
+                                      Générez le QR Code officiel de pointage pour les rotations, affichez-le en plein écran sur tablette ou imprimez la fiche de comptoir.
+                                    </p>
                                     <button 
-                                      onClick={handleGenerateQrSubmit}
-                                      className="btn btn-primary" 
-                                      style={{ padding: '4px 10px', fontSize: '11px' }}
+                                      type="button"
+                                      onClick={() => setShowOwnerQrModal(true)}
+                                      className="btn btn-primary"
+                                      style={{ width: '100%', padding: '10px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     >
-                                      Générer
+                                      <QrCode size={15} />
+                                      <span>Ouvrir Générateur QR & Mode Borne</span>
                                     </button>
                                   </div>
+                                </>
+                              ) : ownerTab === 'audit' ? (
+                                /* TAB AUDIT : JOURNAL DES MODIFICATIONS DE COMMANDES */
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                  <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)' }}>
+                                    <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <ShieldAlert size={14} /> Journal d'Audit des Commandes
+                                    </h5>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 10px 0' }}>
+                                      Traçabilité complète des modifications et annulations effectuées par les gérants.
+                                    </p>
 
-                                  {generatedQr && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                      <svg width="60" height="60" viewBox="0 0 29 29" style={{ background: '#fff', padding: '4px', borderRadius: '4px' }}>
-                                        <path d="M0 0h7v7H0zm2 2v3h3V2zm0 15h3v3H0zm7 7h7v7H0zm2 2v3h3V24zm15-7h3v3h-3zm5-5h3v3h-3zm-5 5h3v3h-3zm10 5h3v3h-3zm-5 5h3v3h-3zm-5-15h3v3h-3zm0-10h7v7h-7zm2 2v3h3V2zm5 5h3v3h-3zm5-5h3v3h-3zm-5 5h3v3h-3zm5-5h3v3h-3z" fill="#0c0c10" />
-                                        <rect x="11" y="11" width="7" height="7" fill="var(--primary)" />
-                                      </svg>
-                                      <span style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--primary)' }}>{generatedQr}</span>
-                                      <p style={{ fontSize: '9px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>
-                                        QR Code statique à imprimer et coller sur la table.
-                                      </p>
-                                      <button 
-                                        onClick={handlePrintQr}
-                                        className="btn btn-secondary" 
-                                        style={{ padding: '2px 8px', fontSize: '9px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                                      >
-                                        <Printer size={10} /> Imprimer
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  {printSuccessMsg && (
-                                    <div style={{ fontSize: '9px', color: 'var(--primary)', marginTop: '4px', textAlign: 'center' }}>
-                                      {printSuccessMsg}
-                                    </div>
-                                  )}
+                                    {orderAuditLogs.length === 0 ? (
+                                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>
+                                        Aucune modification ou annulation de commande enregistrée.
+                                      </div>
+                                    ) : (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+                                        {orderAuditLogs.map(log => (
+                                          <div key={log.id} style={{
+                                            background: 'rgba(255,255,255,0.02)',
+                                            border: '1px solid rgba(255,255,255,0.06)',
+                                            borderRadius: '8px',
+                                            padding: '8px 10px',
+                                            fontSize: '11px'
+                                          }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                              <span style={{
+                                                fontWeight: 800,
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                background: log.action === 'CANCELLED' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                                                color: log.action === 'CANCELLED' ? '#ef4444' : '#f59e0b',
+                                                fontSize: '10px'
+                                              }}>
+                                                {log.action === 'CANCELLED' ? 'ANNULATION' : 'MODIFICATION'}
+                                              </span>
+                                              <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{log.created_at}</span>
+                                            </div>
+                                            <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                                              Par : <strong>{log.manager_name}</strong>
+                                            </div>
+                                            <div style={{ color: 'var(--text-secondary)', fontSize: '10px', marginTop: '2px' }}>
+                                              Motif : <em>"{log.reason}"</em>
+                                            </div>
+                                            <div style={{ fontSize: '10px', color: '#10b981', marginTop: '2px' }}>
+                                              Montant : {log.old_total} F ➔ {log.new_total} F
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </>
-                            ) : (
+                              ) : (
                               /* TAB 2: GÉRANTS & ÉQUIPE (VALIDATION PAR LE PROPRIÉTAIRE) */
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {/* 1. Demandes Gérants en attente */}
@@ -1957,8 +2283,9 @@ export default function App() {
                                 </div>
                               </div>
                             )}
-
-                          </div>
+                          </>
+                        )}
+                      </div>
 
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '10px' }}>
                             Abonnement Actif - Renouvellement : 19/08/2026
@@ -1973,61 +2300,183 @@ export default function App() {
                         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                              <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--secondary)', fontFamily: 'var(--font-heading)' }}>Vue Gérant</h4>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--secondary)', fontFamily: 'var(--font-heading)' }}>Vue Gérant</h4>
+                                <button 
+                                  onClick={() => setIsSimplifiedDashboard(!isSimplifiedDashboard)} 
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '3px 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: isSimplifiedDashboard ? 'var(--secondary)' : 'rgba(255,255,255,0.1)', color: isSimplifiedDashboard ? 'var(--secondary)' : '#cbd5e1' }}
+                                >
+                                  <Layers size={11} /> {isSimplifiedDashboard ? 'Détaillée' : 'Simplifiée ⚡'}
+                                </button>
+                              </div>
                               <button onClick={() => setLoggedInUserId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><LogOut size={16} /></button>
                             </div>
 
-                            {/* Subscriptions Limit Banner */}
-                            {isWaitressLimitReached && (
-                              <div className="quota-alert-banner">
-                                <AlertTriangle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
-                                Limite de serveuses actives atteinte ({activeWaitressesCount}/{activeWaitressLimit}). La validation est bloquée. Upgrade nécessaire.
-                              </div>
-                            )}
-
-                            {/* Tabs inside Manager panel */}
-                            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.04)', marginBottom: '12px' }}>
-                              <button 
-                                onClick={() => setGerantTab('validation')} 
-                                style={{ flex: 1, background: 'none', border: 'none', borderBottom: gerantTab === 'validation' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'validation' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                              >
-                                Équipe
-                                {users.some(u => u.role === 'WAITRESS' && u.status === 'PENDING') && (
-                                  <span style={{ display: 'inline-block', width: '6px', height: '6px', background: 'var(--danger)', borderRadius: '50%', marginLeft: '4px', verticalAlign: 'middle' }} />
+                            {isSimplifiedDashboard ? (
+                              <SimplifiedDashboard 
+                                sales={sales} 
+                                products={products} 
+                                users={users} 
+                                attendances={attendances} 
+                                onSwitchToDetailed={() => setIsSimplifiedDashboard(false)} 
+                              />
+                            ) : (
+                              <>
+                                {/* Subscriptions Limit Banner */}
+                                {isWaitressLimitReached && (
+                                  <div className="quota-alert-banner">
+                                    <AlertTriangle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
+                                    Limite de serveuses actives atteinte ({activeWaitressesCount}/{activeWaitressLimit}). La validation est bloquée. Upgrade nécessaire.
+                                  </div>
                                 )}
-                              </button>
-                              <button 
-                                onClick={() => setGerantTab('catalogue')} 
-                                style={{ flex: 1.1, background: 'none', border: 'none', borderBottom: gerantTab === 'catalogue' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'catalogue' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                              >
-                                Catalogue
-                              </button>
-                              <button 
-                                onClick={() => setGerantTab('presences')} 
-                                style={{ flex: 1.1, background: 'none', border: 'none', borderBottom: gerantTab === 'presences' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'presences' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                              >
-                                Présences
-                              </button>
-                              <button 
-                                onClick={() => setGerantTab('stocks')} 
-                                style={{ flex: 0.9, background: 'none', border: 'none', borderBottom: gerantTab === 'stocks' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'stocks' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                              >
-                                Stocks
-                              </button>
-                              <button 
-                                onClick={() => setShowCreditsModal(true)} 
-                                style={{ flex: 1.1, background: 'rgba(16, 185, 129, 0.1)', border: 'none', borderRadius: '6px', color: '#10B981', fontSize: '11px', padding: '4px 6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}
-                              >
-                                <Ticket size={12} />
-                                <span>Avoirs</span>
-                              </button>
-                            </div>
 
-                            {/* Tab CONTENT: Waitresses approval queue & active team */}
-                            {gerantTab === 'validation' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '240px' }}>
-                                <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Attente approbation</h5>
-                                {users.filter(u => u.role === 'WAITRESS' && u.status === 'PENDING').length === 0 ? (
+                                {/* Tabs inside Manager panel */}
+                                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.04)', marginBottom: '12px', overflowX: 'auto', gap: '2px' }}>
+                                  <button 
+                                    onClick={() => setGerantTab('commandes')} 
+                                    style={{ flex: 1.2, whiteSpace: 'nowrap', background: 'none', border: 'none', borderBottom: gerantTab === 'commandes' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'commandes' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                  >
+                                    Commandes
+                                  </button>
+                                  <button 
+                                    onClick={() => setGerantTab('validation')} 
+                                    style={{ flex: 1, whiteSpace: 'nowrap', background: 'none', border: 'none', borderBottom: gerantTab === 'validation' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'validation' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                  >
+                                    Équipe
+                                    {users.some(u => u.role === 'WAITRESS' && u.status === 'PENDING') && (
+                                      <span style={{ display: 'inline-block', width: '6px', height: '6px', background: 'var(--danger)', borderRadius: '50%', marginLeft: '4px', verticalAlign: 'middle' }} />
+                                    )}
+                                  </button>
+                                  <button 
+                                    onClick={() => setGerantTab('catalogue')} 
+                                    style={{ flex: 1.1, whiteSpace: 'nowrap', background: 'none', border: 'none', borderBottom: gerantTab === 'catalogue' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'catalogue' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                  >
+                                    Catalogue
+                                  </button>
+                                  <button 
+                                    onClick={() => setGerantTab('presences')} 
+                                    style={{ flex: 1.1, whiteSpace: 'nowrap', background: 'none', border: 'none', borderBottom: gerantTab === 'presences' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'presences' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                  >
+                                    Présences
+                                  </button>
+                                  <button 
+                                    onClick={() => setGerantTab('stocks')} 
+                                    style={{ flex: 0.9, whiteSpace: 'nowrap', background: 'none', border: 'none', borderBottom: gerantTab === 'stocks' ? '2px solid var(--secondary)' : 'none', color: gerantTab === 'stocks' ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '11px', paddingBottom: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                  >
+                                    Stocks
+                                  </button>
+                                  <button 
+                                    onClick={() => setShowCreditsModal(true)} 
+                                    style={{ flex: 1, whiteSpace: 'nowrap', background: 'rgba(16, 185, 129, 0.1)', border: 'none', borderRadius: '6px', color: '#10B981', fontSize: '11px', padding: '4px 6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}
+                                  >
+                                    <Ticket size={12} />
+                                    <span>Avoirs</span>
+                                  </button>
+                                </div>
+
+                                {/* TAB 0: COMMANDES & AUDIT LOGS (DROIT D'ÉDITION GÉRANT) */}
+                                {gerantTab === 'commandes' && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '250px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <h5 style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                        Commandes Récentes ({sales.length})
+                                      </h5>
+                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                        Cliquez pour modifier ou annuler
+                                      </span>
+                                    </div>
+
+                                    {sales.length === 0 ? (
+                                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>
+                                        Aucune commande pour le moment.
+                                      </p>
+                                    ) : (
+                                      sales.map(s => (
+                                        <div 
+                                          key={s.id} 
+                                          style={{
+                                            background: s.status === 'CANCELLED' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.02)',
+                                            border: s.status === 'CANCELLED' ? '1px dashed rgba(239, 68, 68, 0.3)' : s.status === 'MODIFIED' ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(255,255,255,0.04)',
+                                            borderRadius: '8px',
+                                            padding: '8px 10px',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                          }}
+                                        >
+                                          <div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <span style={{ fontWeight: 800, fontSize: '12px' }}>{s.waitress_name}</span>
+                                              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>• {s.created_at}</span>
+                                              <span style={{
+                                                fontSize: '9px',
+                                                padding: '1px 5px',
+                                                borderRadius: '4px',
+                                                fontWeight: 700,
+                                                background: s.status === 'CANCELLED' ? 'rgba(239, 68, 68, 0.15)' : s.status === 'MODIFIED' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                                color: s.status === 'CANCELLED' ? '#ef4444' : s.status === 'MODIFIED' ? '#f59e0b' : '#10b981'
+                                              }}>
+                                                {s.status === 'CANCELLED' ? 'Annulée' : s.status === 'MODIFIED' ? 'Modifiée' : 'Validée'}
+                                              </span>
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 700, marginTop: '2px' }}>
+                                              {s.total_amount.toLocaleString()} F CFA • {s.payment_method === 'CASH' ? '💵 Espèces' : '📱 MoMo'}
+                                              {s.items && s.items.length > 0 && (
+                                                <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 400, marginLeft: '6px' }}>
+                                                  ({s.items.reduce((sum, it) => sum + it.quantity, 0)} btles)
+                                                </span>
+                                              )}
+                                            </div>
+                                            {s.edit_reason && (
+                                              <div style={{ fontSize: '9px', color: '#f59e0b', marginTop: '1px' }}>
+                                                Motif : {s.edit_reason}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          <div style={{ display: 'flex', gap: '4px' }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditingOrder(s)}
+                                              className="btn btn-secondary"
+                                              style={{
+                                                padding: '4px 8px',
+                                                fontSize: '10px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                borderColor: 'var(--secondary)'
+                                              }}
+                                            >
+                                              <Edit3 size={11} />
+                                              <span>{s.status === 'CANCELLED' ? 'Détails' : 'Modifier'}</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+
+                                    {/* Sub-section : Journal d'audit */}
+                                    <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+                                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <ShieldAlert size={12} />
+                                        <span>Journal d'audit des modifications ({orderAuditLogs.length})</span>
+                                      </div>
+                                      {orderAuditLogs.slice(0, 3).map(log => (
+                                        <div key={log.id} style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '2px 0', borderBottom: '1px dashed rgba(255,255,255,0.03)' }}>
+                                          <strong>{log.manager_name}</strong> : {log.action} (#{log.sale_id.slice(-6)}) - "{log.reason}" ({log.old_total} F ➔ {log.new_total} F)
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Tab CONTENT: Waitresses approval queue & active team */}
+                                {gerantTab === 'validation' && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '240px' }}>
+                                    <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Attente approbation</h5>
+                                    {users.filter(u => u.role === 'WAITRESS' && u.status === 'PENDING').length === 0 ? (
                                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0' }}>Aucune inscription en attente.</p>
                                 ) : (
                                   users.filter(u => u.role === 'WAITRESS' && u.status === 'PENDING').map(u => (
@@ -2174,6 +2623,11 @@ export default function App() {
                                         <div>
                                           <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{w.name}</span>
                                           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Tél : {w.phone}</div>
+                                          {activeShift && activeShift.accuracy && (
+                                            <div style={{ fontSize: '9px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                                              <MapPin size={9} /> GPS ±{activeShift.accuracy}m ({activeShift.location_status || 'OK'})
+                                            </div>
+                                          )}
                                         </div>
                                         <div>
                                           {activeShift ? (
@@ -2193,8 +2647,15 @@ export default function App() {
 
                                 <h5 style={{ margin: '10px 0 4px 0', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Historique du jour</h5>
                                 {attendances.map(a => (
-                                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-secondary)', borderBottom: '1px solid rgba(255,255,255,0.03)', padding: '4px 0' }}>
-                                    <span>{a.waitress_name}</span>
+                                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', borderBottom: '1px solid rgba(255,255,255,0.03)', padding: '4px 0' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <span>{a.waitress_name}</span>
+                                      {a.accuracy && (
+                                        <span style={{ fontSize: '8px', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '1px 4px', borderRadius: '3px' }}>
+                                          📍 ±{a.accuracy}m
+                                        </span>
+                                      )}
+                                    </div>
                                     <span>{a.check_in} - {a.check_out || 'En rotation'}</span>
                                   </div>
                                 ))}
@@ -2265,8 +2726,9 @@ export default function App() {
                                 )}
                               </div>
                             )}
-
-                          </div>
+                          </>
+                        )}
+                      </div>
 
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
                             Calypso Maquis Dashboard
@@ -2286,80 +2748,140 @@ export default function App() {
                               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                                 
                                 {checkoutStep === 1 ? (
-                                  // --- STEP 1: BEVERAGE SELECTION & CART QUANTITIES ---
-                                  <>
-                                    <div className="step-indicator">
-                                      <div className="step-dot active" />
-                                      <div className="step-dot" />
-                                      <span>Étape 1/2 : Sélection boissons</span>
-                                    </div>
-
-                                    {/* Beverage catalogue list with images */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '180px', paddingRight: '4px' }}>
-                                      {products.filter(p => p.is_active).map(p => (
-                                        <div 
-                                          key={p.id} 
-                                          style={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: '10px',
-                                            background: 'rgba(255,255,255,0.01)', 
-                                            border: '1px solid rgba(255,255,255,0.03)',
-                                            borderRadius: '8px',
-                                            padding: '6px 10px'
+                                  posVisualMode ? (
+                                    <>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Beer size={13} /> Caisse Visuelle Rapide
+                                          </span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => setPosVisualMode(false)}
+                                          className="btn btn-secondary"
+                                          style={{
+                                            padding: '3px 8px',
+                                            fontSize: '10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            color: 'var(--text-muted)'
                                           }}
                                         >
-                                          {/* Cached Offline Image */}
-                                          <div className="product-image-container">
-                                            <img src={p.image_base64} alt={p.name} className="product-image" />
-                                          </div>
-
-                                          <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{p.name} <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{p.volume}</span></div>
-                                            <div style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: 'bold' }}>{p.price} CFA</div>
-                                            <div style={{ fontSize: '9px', color: p.current_stock < 10 ? 'var(--danger)' : 'var(--text-muted)' }}>Stock : {p.current_stock}</div>
-                                          </div>
-
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {cart[p.id] ? (
-                                              <>
-                                                <button 
-                                                  onClick={() => handleRemoveFromCart(p.id)} 
-                                                  style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
-                                                >
-                                                  -
-                                                </button>
-                                                <span style={{ fontSize: '12px', fontWeight: 'bold', width: '12px', textAlign: 'center' }}>{cart[p.id]}</span>
-                                              </>
-                                            ) : null}
-                                            <button 
-                                              onClick={() => handleAddToCart(p.id)} 
-                                              disabled={p.current_stock <= 0}
-                                              style={{ width: '22px', height: '22px', borderRadius: '50%', background: p.current_stock <= 0 ? 'rgba(255,255,255,0.02)' : 'var(--primary)', border: 'none', color: '#0d0d12', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
-                                            >
-                                              +
-                                            </button>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-
-                                    {/* Proceed to step 2 cart summary */}
-                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '10px', marginTop: '10px' }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '13px', marginBottom: '8px' }}>
-                                        <span>Sélectionné ({cartTotalQty}) :</span>
-                                        <span style={{ color: 'var(--primary)' }}>{cartTotal} CFA</span>
+                                          <Eye size={11} /> Mode Liste
+                                        </button>
                                       </div>
-                                      <button 
-                                        className="btn btn-primary" 
-                                        style={{ width: '100%', padding: '10px', fontSize: '12px' }}
-                                        disabled={cartTotalQty === 0}
-                                        onClick={handleProceedToPayment}
-                                      >
-                                        Passer à la caisse <ArrowRight size={14} />
-                                      </button>
-                                    </div>
-                                  </>
+
+                                      <VisualCatalogPos
+                                        products={products}
+                                        cart={cart}
+                                        onAddToCart={handleAddToCart}
+                                        onRemoveFromCart={handleRemoveFromCart}
+                                        onClearCart={() => setCart({})}
+                                        onCheckoutCash={() => finalizeSale('CASH')}
+                                        onCheckoutMoMo={() => {
+                                          setCheckoutStep(2);
+                                          setSelectedPaymentMethod('MOBILE_MONEY');
+                                        }}
+                                        cartTotal={cartTotal}
+                                        cartTotalQty={cartTotalQty}
+                                      />
+                                    </>
+                                  ) : (
+                                    // --- STEP 1: BEVERAGE SELECTION & CART QUANTITIES (MODE LISTE) ---
+                                    <>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <div className="step-indicator" style={{ margin: 0 }}>
+                                          <div className="step-dot active" />
+                                          <div className="step-dot" />
+                                          <span>Étape 1/2 : Sélection</span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => setPosVisualMode(true)}
+                                          className="btn btn-secondary"
+                                          style={{
+                                            padding: '3px 8px',
+                                            fontSize: '10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            borderColor: 'var(--primary)',
+                                            color: 'var(--primary)'
+                                          }}
+                                        >
+                                          <Beer size={11} /> Mode Visuel ⚡
+                                        </button>
+                                      </div>
+
+                                      {/* Beverage catalogue list with images */}
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '180px', paddingRight: '4px' }}>
+                                        {products.filter(p => p.is_active).map(p => (
+                                          <div 
+                                            key={p.id} 
+                                            style={{ 
+                                              display: 'flex', 
+                                              alignItems: 'center', 
+                                              gap: '10px',
+                                              background: 'rgba(255,255,255,0.01)', 
+                                              border: '1px solid rgba(255,255,255,0.03)',
+                                              borderRadius: '8px',
+                                              padding: '6px 10px'
+                                            }}
+                                          >
+                                            {/* Cached Offline Image */}
+                                            <div className="product-image-container">
+                                              <img src={p.image_base64} alt={p.name} className="product-image" />
+                                            </div>
+
+                                            <div style={{ flex: 1 }}>
+                                              <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{p.name} <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{p.volume}</span></div>
+                                              <div style={{ color: 'var(--primary)', fontSize: '11px', fontWeight: 'bold' }}>{p.price} CFA</div>
+                                              <div style={{ fontSize: '9px', color: p.current_stock < 10 ? 'var(--danger)' : 'var(--text-muted)' }}>Stock : {p.current_stock}</div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              {cart[p.id] ? (
+                                                <>
+                                                  <button 
+                                                    onClick={() => handleRemoveFromCart(p.id)} 
+                                                    style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
+                                                  >
+                                                    -
+                                                  </button>
+                                                  <span style={{ fontSize: '12px', fontWeight: 'bold', width: '12px', textAlign: 'center' }}>{cart[p.id]}</span>
+                                                </>
+                                              ) : null}
+                                              <button 
+                                                onClick={() => handleAddToCart(p.id)} 
+                                                disabled={p.current_stock <= 0}
+                                                style={{ width: '22px', height: '22px', borderRadius: '50%', background: p.current_stock <= 0 ? 'rgba(255,255,255,0.02)' : 'var(--primary)', border: 'none', color: '#0d0d12', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
+                                              >
+                                                +
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+
+                                      {/* Proceed to step 2 cart summary */}
+                                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '10px', marginTop: '10px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '13px', marginBottom: '8px' }}>
+                                          <span>Sélectionné ({cartTotalQty}) :</span>
+                                          <span style={{ color: 'var(--primary)' }}>{cartTotal} CFA</span>
+                                        </div>
+                                        <button 
+                                          className="btn btn-primary" 
+                                          style={{ width: '100%', padding: '10px', fontSize: '12px' }}
+                                          disabled={cartTotalQty === 0}
+                                          onClick={handleProceedToPayment}
+                                        >
+                                          Passer à la caisse <ArrowRight size={14} />
+                                        </button>
+                                      </div>
+                                    </>
+                                  )
                                 ) : (
                                   // --- STEP 2: DEDICATED BILLING SCREEN (CASH OR MOMO) ---
                                   <>
@@ -2460,39 +2982,48 @@ export default function App() {
                                 <div>
                                   <h4 style={{ margin: '0 0 4px 0', fontSize: '14px' }}>Pointage de Rotation</h4>
                                   <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                                    Scannez le QR Code du comptoir pour pointer.
+                                    Scannez le QR Code officiel du comptoir. La position GPS standard W3C sera automatiquement certifiée.
                                   </p>
                                 </div>
 
-                                <div className="qr-scanner-view" style={{ minHeight: '160px' }}>
-                                  {isScanning ? (
-                                    <>
-                                      <div className="scanner-overlay-box">
-                                        <div className="scanner-laser" />
-                                      </div>
-                                      <span style={{ color: 'var(--primary)', fontSize: '10px', marginTop: '8px' }}>Scan en cours...</span>
-                                    </>
-                                  ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                      <QrCode size={40} style={{ color: 'var(--text-muted)', marginBottom: '10px' }} />
-                                      <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '11px' }} onClick={handleQRScan}>
-                                        Scanner QR Code
-                                      </button>
-                                    </div>
-                                  )}
+                                <div className="qr-scanner-view" style={{ minHeight: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                  <QrCode size={44} style={{ color: 'var(--primary)', marginBottom: '12px' }} />
+                                  <button 
+                                    className="btn btn-primary" 
+                                    style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }} 
+                                    onClick={handleStartQrScan}
+                                  >
+                                    <QrCode size={16} /> Scanner Caméra (Web W3C)
+                                  </button>
+                                  <button
+                                    onClick={() => handleProcessQrScan('POINTAGE_SIMULATED')}
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '10px', textDecoration: 'underline', marginTop: '10px', cursor: 'pointer' }}
+                                  >
+                                    Pointer rapidement sans caméra (GPS W3C)
+                                  </button>
                                 </div>
 
                                 {scanMessage && (
                                   <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--secondary)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '6px', padding: '6px', textAlign: 'center', fontSize: '11px', marginTop: '8px', fontWeight: 'bold' }}>
-                                    ✓ {scanMessage}
+                                    {scanMessage}
                                   </div>
                                 )}
 
-                                <div style={{ marginTop: '10px', maxHeight: '60px', overflowY: 'auto' }}>
+                                <div style={{ marginTop: '10px', maxHeight: '75px', overflowY: 'auto' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                    Historique de vos shifts
+                                  </div>
                                   {attendances.filter(a => a.waitress_name === currentUser.name).map((a, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-secondary)' }}>
-                                      <span>Check-in: {a.check_in}</span>
-                                      <span>Check-out: {a.check_out || 'Actif'}</span>
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span>Arrivée: {a.check_in}</span>
+                                        {a.accuracy && (
+                                          <span style={{ fontSize: '8px', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '1px 4px', borderRadius: '3px' }}>
+                                            📍 ±{a.accuracy}m
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span>Départ: {a.check_out || 'En cours'}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -2876,6 +3407,36 @@ export default function App() {
           ));
         }}
       />
+
+      {/* MODAL SCANNER QR CODE WEB (CAMÉRA + GPS STANDARD W3C) */}
+      {showWebQrScanner && (
+        <WebQrScanner
+          onScan={handleProcessQrScan}
+          onClose={() => setShowWebQrScanner(false)}
+          title="Pointage Présence & Rotation"
+        />
+      )}
+
+      {/* MODAL GÉNÉRATEUR QR OFFICIEL PROPRIÉTAIRE (TABLETTE / IMPRESSION) */}
+      {showOwnerQrModal && (
+        <OwnerQrGeneratorModal
+          establishmentId={establishmentId}
+          establishmentName={impersonatedEstablishment?.name || "Maquis Le Grand Faso"}
+          onClose={() => setShowOwnerQrModal(false)}
+        />
+      )}
+
+      {/* MODAL MODIFICATION / ANNULATION COMMANDE PAR LE GÉRANT */}
+      {editingOrder && (
+        <OrderEditModal
+          order={editingOrder}
+          products={products}
+          currentUser={currentUser}
+          onSaveEdit={handleSaveOrderEdit}
+          onCancelOrder={handleCancelOrder}
+          onClose={() => setEditingOrder(null)}
+        />
+      )}
     </div>
   );
 }

@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS public.sales (
     user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     total_amount DECIMAL(10, 2) NOT NULL,
     payment_method VARCHAR(50) NOT NULL CHECK (payment_method IN ('CASH', 'MOBILE_MONEY')),
+    status VARCHAR(50) DEFAULT 'COMPLETED' NOT NULL CHECK (status IN ('COMPLETED', 'MODIFIED', 'CANCELLED')),
     is_synced BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -92,7 +93,7 @@ CREATE TABLE IF NOT EXISTS public.inventory_adjustments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
--- 8. TABLE: Pointage des Présences (Attendances)
+-- 8. TABLE: Pointage des Présences (Attendances avec Géolocalisation Standard W3C)
 CREATE TABLE IF NOT EXISTS public.attendances (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     establishment_id UUID REFERENCES public.establishments(id) ON DELETE CASCADE,
@@ -100,9 +101,31 @@ CREATE TABLE IF NOT EXISTS public.attendances (
     check_in TIMESTAMP WITH TIME ZONE NOT NULL,
     check_out TIMESTAMP WITH TIME ZONE,
     check_in_method VARCHAR(50) DEFAULT 'QR_CODE' NOT NULL CHECK (check_in_method IN ('QR_CODE', 'MANUAL')),
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+    accuracy DECIMAL(10, 2),
+    location_status VARCHAR(50) DEFAULT 'GPS_CAPTURED',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- 8 bis. TABLE: Journal d'Audit des Modifications de Commandes par le Gérant
+CREATE TABLE IF NOT EXISTS public.order_audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    establishment_id UUID REFERENCES public.establishments(id) ON DELETE CASCADE,
+    sale_id UUID REFERENCES public.sales(id) ON DELETE CASCADE,
+    manager_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    manager_name VARCHAR(255) NOT NULL,
+    action VARCHAR(50) NOT NULL CHECK (action IN ('MODIFIED', 'CANCELLED')),
+    reason TEXT NOT NULL,
+    old_total DECIMAL(10, 2) NOT NULL,
+    new_total DECIMAL(10, 2) NOT NULL,
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_audit_sale ON public.order_audit_logs(sale_id);
+CREATE INDEX IF NOT EXISTS idx_order_audit_est ON public.order_audit_logs(establishment_id);
 
 -- 9. FONCTIONS ET TRIGGERS POUR L'ACTUALISATION DES TIMESTAMPS
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -162,6 +185,7 @@ ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sale_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventory_adjustments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Politiques de lecture/écriture permissives pour l'API anon (authentification via token ou clé de projet)
 CREATE POLICY "Permissive select on establishments" ON public.establishments FOR SELECT USING (true);
@@ -173,6 +197,7 @@ CREATE POLICY "Permissive all on sales" ON public.sales FOR ALL USING (true);
 CREATE POLICY "Permissive all on sale_items" ON public.sale_items FOR ALL USING (true);
 CREATE POLICY "Permissive all on inventory_adjustments" ON public.inventory_adjustments FOR ALL USING (true);
 CREATE POLICY "Permissive all on attendances" ON public.attendances FOR ALL USING (true);
+CREATE POLICY "Permissive all on order_audit_logs" ON public.order_audit_logs FOR ALL USING (true);
 
 -- 12. DONNÉES INITIALES (SEED DATA POUR TEST)
 DO $$

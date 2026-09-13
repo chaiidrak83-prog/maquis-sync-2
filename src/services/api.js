@@ -151,6 +151,55 @@ export const salesService = {
     }
 
     return sale;
+  },
+
+  async updateSale({ saleId, establishmentId, totalAmount, paymentMethod, status = 'MODIFIED', items }) {
+    if (!isSupabaseConfigured()) return null;
+
+    // Mise à jour de la vente
+    const { data: sale, error: saleError } = await supabase
+      .from('sales')
+      .update({
+        total_amount: totalAmount,
+        payment_method: paymentMethod,
+        status: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', saleId)
+      .select()
+      .single();
+
+    if (saleError) throw saleError;
+
+    // Si de nouveaux items sont fournis, remplacer les sale_items existants
+    if (items && items.length > 0) {
+      await supabase.from('sale_items').delete().eq('sale_id', saleId);
+      const saleItemsToInsert = items.map(item => ({
+        sale_id: saleId,
+        product_id: item.productId,
+        quantity: item.quantity,
+        unit_price: item.unitPrice
+      }));
+      const { error: itemsError } = await supabase.from('sale_items').insert(saleItemsToInsert);
+      if (itemsError) console.warn('Erreur remplacement sale_items:', itemsError);
+    }
+
+    return sale;
+  },
+
+  async cancelSale({ saleId, reason }) {
+    if (!isSupabaseConfigured()) return null;
+    const { data, error } = await supabase
+      .from('sales')
+      .update({ 
+        status: 'CANCELLED',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', saleId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 };
 
@@ -231,7 +280,7 @@ export const attendanceService = {
     return data || [];
   },
 
-  async checkIn({ establishmentId, userId, method = 'QR_CODE' }) {
+  async checkIn({ establishmentId, userId, method = 'QR_CODE', latitude = null, longitude = null, accuracy = null, locationStatus = 'GPS_CAPTURED' }) {
     if (!isSupabaseConfigured()) throw new Error('Supabase non configuré');
     const { data, error } = await supabase
       .from('attendances')
@@ -239,7 +288,11 @@ export const attendanceService = {
         establishment_id: establishmentId,
         user_id: userId,
         check_in: new Date().toISOString(),
-        check_in_method: method
+        check_in_method: method,
+        latitude,
+        longitude,
+        accuracy,
+        location_status: locationStatus
       })
       .select()
       .single();
@@ -256,6 +309,46 @@ export const attendanceService = {
       .select()
       .single();
     if (error) throw error;
+    return data;
+  }
+};
+
+export const orderAuditService = {
+  async getAll(establishmentId) {
+    if (!isSupabaseConfigured()) return [];
+    let query = supabase
+      .from('order_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (establishmentId) {
+      query = query.eq('establishment_id', establishmentId);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.warn('Supabase order_audit_logs fetch error:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async createLog({ establishmentId, saleId, managerId, managerName, action, reason, oldTotal, newTotal, details = {} }) {
+    if (!isSupabaseConfigured()) return null;
+    const { data, error } = await supabase
+      .from('order_audit_logs')
+      .insert({
+        establishment_id: establishmentId,
+        sale_id: saleId,
+        manager_id: managerId,
+        manager_name: managerName,
+        action,
+        reason,
+        old_total: oldTotal,
+        new_total: newTotal,
+        details
+      })
+      .select()
+      .single();
+    if (error) console.warn('Supabase order_audit_logs insert error:', error);
     return data;
   }
 };
