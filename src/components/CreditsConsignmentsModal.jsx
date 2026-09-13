@@ -5,18 +5,14 @@ import {
   Send, 
   CheckCircle, 
   AlertCircle, 
-  Smartphone, 
   DollarSign, 
   Beer, 
   Key, 
-  Radio, 
-  Settings, 
   RefreshCw,
   Copy,
   Clock
 } from 'lucide-react';
 import { creditsService } from '../services/creditsService';
-import { gsmGatewayService } from '../services/gsmGatewayService';
 
 export default function CreditsConsignmentsModal({
   isOpen,
@@ -27,7 +23,7 @@ export default function CreditsConsignmentsModal({
   products = [],
   onStockDeduct = null
 }) {
-  const [activeTab, setActiveTab] = useState('create'); // 'create' | 'validate' | 'config'
+  const [activeTab, setActiveTab] = useState('create'); // 'create' | 'validate'
   
   // Tab 1: Create State
   const [opType, setOpType] = useState('AVOIR'); // 'AVOIR' | 'CONSIGNATION'
@@ -45,10 +41,6 @@ export default function CreditsConsignmentsModal({
   const [isSearching, setIsSearching] = useState(false);
   const [redemptionSuccess, setRedemptionSuccess] = useState(null);
   const [redemptionError, setRedemptionError] = useState('');
-
-  // Tab 3: GSM Config State
-  const [gsmConfig, setGsmConfig] = useState(gsmGatewayService.getConfig());
-  const [testStatus, setTestStatus] = useState(null); // 'testing' | 'success' | 'error'
 
   useEffect(() => {
     if (products.length > 0 && !selectedProductId) {
@@ -162,20 +154,6 @@ export default function CreditsConsignmentsModal({
     }
   };
 
-  // --- Handlers: GSM Gateway Config ---
-  const handleSaveGsmConfig = (e) => {
-    e.preventDefault();
-    gsmGatewayService.saveConfig(gsmConfig);
-    setTestStatus('saved');
-    setTimeout(() => setTestStatus(null), 3000);
-  };
-
-  const handleTestGsmConnection = async () => {
-    setTestStatus('testing');
-    const ok = await gsmGatewayService.testConnection(gsmConfig.url, gsmConfig.apiKey);
-    setTestStatus(ok ? 'success' : 'error');
-  };
-
   return (
     <div 
       style={{
@@ -233,7 +211,7 @@ export default function CreditsConsignmentsModal({
                 Avoirs & Consignations
               </h3>
               <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                SMS Gratuit via Passerelle GSM Locale (0 FCFA)
+                Suivi des ardoises & bouteilles consignées
               </span>
             </div>
           </div>
@@ -260,7 +238,7 @@ export default function CreditsConsignmentsModal({
         {/* Modal Tabs */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateColumns: '1fr 1fr',
           background: 'rgba(0, 0, 0, 0.3)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           padding: '4px'
@@ -307,28 +285,6 @@ export default function CreditsConsignmentsModal({
             <Key size={14} />
             <span>Valider / Retrait</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('config')}
-            style={{
-              background: activeTab === 'config' ? '#10B981' : 'transparent',
-              color: activeTab === 'config' ? '#000000' : '#9CA3AF',
-              border: 'none',
-              padding: '10px 4px',
-              borderRadius: '8px',
-              fontWeight: 700,
-              fontSize: '12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.2s'
-            }}
-          >
-            <Settings size={14} />
-            <span>Passerelle GSM</span>
-          </button>
         </div>
 
         {/* Content Body */}
@@ -368,19 +324,20 @@ export default function CreditsConsignmentsModal({
                       {createdResult.pinCode}
                     </div>
                     <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
-                      Envoyé par SMS au <strong>{createdResult.record.client_phone}</strong>
+                      Attribué au client <strong>{createdResult.record.client_phone}</strong>
                     </div>
                   </div>
 
                   <div style={{
-                    fontSize: '11px',
-                    color: createdResult.smsResult.simulated ? '#F59E0B' : '#10B981',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    padding: '8px',
+                    fontSize: '12px',
+                    color: '#10B981',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    padding: '10px',
                     borderRadius: '8px',
                     marginBottom: '18px'
                   }}>
-                    📡 {createdResult.smsResult.message}
+                    ✓ Opération enregistrée avec succès. Donnez ce code PIN au client pour son prochain passage.
                   </div>
 
                   <button
@@ -652,7 +609,7 @@ export default function CreditsConsignmentsModal({
                       Retrait validé : {redemptionSuccess.record.item_details}
                     </div>
                     <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
-                      SMS de confirmation envoyé au {redemptionSuccess.record.client_phone}.
+                      Opération validée pour le client {redemptionSuccess.record.client_phone}.
                     </div>
                   </div>
                 </div>
@@ -737,128 +694,6 @@ export default function CreditsConsignmentsModal({
                 ))}
               </div>
             </div>
-          )}
-
-          {/* ============================================================ */}
-          {/* TAB 3: LOCAL GSM GATEWAY CONFIGURATION */}
-          {/* ============================================================ */}
-          {activeTab === 'config' && (
-            <form onSubmit={handleSaveGsmConfig}>
-              <div style={{
-                background: 'rgba(249, 115, 22, 0.08)',
-                border: '1px solid rgba(249, 115, 22, 0.25)',
-                borderRadius: '12px',
-                padding: '14px',
-                marginBottom: '16px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#F97316', fontWeight: 700, fontSize: '13px', marginBottom: '6px' }}>
-                  <Smartphone size={18} />
-                  <span>Passerelle GSM Locale (Coût : 0 FCFA)</span>
-                </div>
-                <p style={{ margin: 0, fontSize: '12px', color: '#D1D5DB', lineHeight: '1.4' }}>
-                  Utilisez un smartphone Android équipé d'une carte SIM locale (Orange, Moov, Wave) avec SMS illimités. Installez une application Android gratuite (ex: <em>SMS Gateway API</em>) connectée sur le même réseau Wi-Fi.
-                </p>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label" style={{ color: '#D1D5DB' }}>
-                  Activer la passerelle GSM locale
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input
-                    type="checkbox"
-                    id="gsmEnabled"
-                    checked={gsmConfig.enabled}
-                    onChange={(e) => setGsmConfig({ ...gsmConfig, enabled: e.target.checked })}
-                    style={{ width: '18px', height: '18px', accentColor: '#10B981' }}
-                  />
-                  <label htmlFor="gsmEnabled" style={{ fontSize: '13px', color: '#FFFFFF', cursor: 'pointer' }}>
-                    {gsmConfig.enabled ? 'Passerelle Active' : 'Passerelle Désactivée (Mode simulation)'}
-                  </label>
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label" style={{ color: '#D1D5DB' }}>
-                  Adresse HTTP du Smartphone Android Passerelle
-                </label>
-                <input
-                  type="url"
-                  placeholder="http://192.168.1.50:8080/send"
-                  className="input-field"
-                  value={gsmConfig.url}
-                  onChange={(e) => setGsmConfig({ ...gsmConfig, url: e.target.value })}
-                  required
-                />
-                <span style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '4px', display: 'block' }}>
-                  Exemple : http://192.168.1.50:8080/send ou http://10.0.0.12:8080/send
-                </span>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label" style={{ color: '#D1D5DB' }}>
-                  Clé d'authentification API (Optionnelle)
-                </label>
-                <input
-                  type="password"
-                  placeholder="Laisser vide si aucune"
-                  className="input-field"
-                  value={gsmConfig.apiKey}
-                  onChange={(e) => setGsmConfig({ ...gsmConfig, apiKey: e.target.value })}
-                />
-              </div>
-
-              {testStatus && (
-                <div style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  marginBottom: '12px',
-                  background: testStatus === 'success' 
-                    ? 'rgba(16, 185, 129, 0.15)' 
-                    : testStatus === 'saved'
-                      ? 'rgba(59, 130, 246, 0.15)'
-                      : 'rgba(239, 68, 68, 0.15)',
-                  color: testStatus === 'success' 
-                    ? '#10B981' 
-                    : testStatus === 'saved'
-                      ? '#3B82F6'
-                      : '#EF4444'
-                }}>
-                  {testStatus === 'testing' && '⏳ Test de connexion en cours...'}
-                  {testStatus === 'success' && '✓ Smartphone passerelle joignable et prêt !'}
-                  {testStatus === 'saved' && '✓ Configuration sauvegardée localement.'}
-                  {testStatus === 'error' && '✕ Injoignable (Vérifiez le Wi-Fi et l\'IP du téléphone)'}
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={handleTestGsmConnection}
-                  className="btn btn-secondary"
-                  style={{ padding: '10px', borderRadius: '10px', fontSize: '12px' }}
-                >
-                  Tester IP
-                </button>
-
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{
-                    padding: '10px',
-                    borderRadius: '10px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    background: 'linear-gradient(135deg, #10B981, #059669)',
-                    border: 'none',
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Sauvegarder Configuration
-                </button>
-              </div>
-            </form>
           )}
         </div>
       </div>

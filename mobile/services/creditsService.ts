@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { gsmGatewayService, SmsSendResult } from './gsmGatewayService';
 
 export interface ClientCreditConsignment {
   id: string;
@@ -53,7 +52,7 @@ export const creditsService = {
     amount?: number;
     itemDetails: string;
     establishmentName?: string;
-  }): Promise<{ success: boolean; record: ClientCreditConsignment; pinCode: string; smsResult: SmsSendResult }> {
+  }): Promise<{ success: boolean; record: ClientCreditConsignment; pinCode: string }> {
     const pinCode = this.generatePinCode();
     const cleanPhone = (params.clientPhone || '').replace(/\s+/g, '');
 
@@ -107,30 +106,10 @@ export const creditsService = {
       }
     }
 
-    // 3. Envoi SMS via passerelle GSM locale
-    let smsText = '';
-    if (params.type === 'AVOIR') {
-      smsText = gsmGatewayService.formatCreditSms({
-        establishmentName: params.establishmentName,
-        amount: record.amount,
-        pinCode
-      });
-    } else {
-      smsText = gsmGatewayService.formatConsignmentSms({
-        establishmentName: params.establishmentName,
-        itemDetails: params.itemDetails,
-        quantity: record.quantity,
-        pinCode
-      });
-    }
-
-    const smsResult = await gsmGatewayService.sendSms(cleanPhone, smsText);
-
     return {
       success: true,
       record,
-      pinCode,
-      smsResult
+      pinCode
     };
   },
 
@@ -182,7 +161,7 @@ export const creditsService = {
     waitressName?: string;
     establishmentName?: string;
     onLocalStockDeduct?: (productId: string, qty: number) => void;
-  }): Promise<{ success: boolean; message: string; record?: ClientCreditConsignment; smsResult?: SmsSendResult }> {
+  }): Promise<{ success: boolean; message: string; record?: ClientCreditConsignment }> {
     const cleanCode = (params.validationCode || '').trim();
     if (!cleanCode) {
       return { success: false, message: 'Code PIN manquant' };
@@ -232,19 +211,10 @@ export const creditsService = {
       params.onLocalStockDeduct(redeemedRecord.product_id, redeemedRecord.quantity || 1);
     }
 
-    const confirmationSms = gsmGatewayService.formatRedemptionSms({
-      establishmentName: params.establishmentName,
-      itemDetails: redeemedRecord.item_details,
-      waitressName: params.waitressName
-    });
-
-    const smsResult = await gsmGatewayService.sendSms(redeemedRecord.client_phone, confirmationSms);
-
     return {
       success: true,
       message: 'Validation et déstockage réussis !',
-      record: redeemedRecord,
-      smsResult
+      record: redeemedRecord
     };
   }
 };

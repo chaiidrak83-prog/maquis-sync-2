@@ -126,12 +126,12 @@ export default function PwaInstallButton({
         {isInstalled ? (
           <>
             <CheckCircle size={isHero ? 18 : 15} />
-            <span>Ouvrir l'App</span>
+            <span>Ouvrir l'application</span>
           </>
         ) : (
           <>
             <Download size={isHero ? 18 : 15} />
-            <span>{isHero ? "📲 Installer l'App Mobile (PWA)" : "Installer l'App"}</span>
+            <span>Installer l'application</span>
           </>
         )}
       </button>

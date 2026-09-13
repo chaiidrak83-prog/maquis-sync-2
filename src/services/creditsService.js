@@ -1,5 +1,4 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { gsmGatewayService } from './gsmGatewayService';
 
 const LOCAL_STORAGE_KEY = 'maquissync_local_credits_consignments';
 
@@ -96,30 +95,10 @@ export const creditsService = {
       }
     }
 
-    // 3. Préparation & Envoi du SMS via la passerelle GSM locale (0 FCFA)
-    let smsText = '';
-    if (type === 'AVOIR') {
-      smsText = gsmGatewayService.formatCreditSms({
-        establishmentName,
-        amount: record.amount,
-        pinCode
-      });
-    } else {
-      smsText = gsmGatewayService.formatConsignmentSms({
-        establishmentName,
-        itemDetails,
-        quantity: record.quantity,
-        pinCode
-      });
-    }
-
-    const smsResult = await gsmGatewayService.sendSms(cleanPhone, smsText);
-
     return {
       success: true,
       record,
-      pinCode,
-      smsResult
+      pinCode
     };
   },
 
@@ -268,20 +247,10 @@ export const creditsService = {
       onLocalStockDeduct(redeemedRecord.product_id, redeemedRecord.quantity || 1);
     }
 
-    // 4. Envoi du SMS de confirmation de retrait au client (0 FCFA)
-    const confirmationSms = gsmGatewayService.formatRedemptionSms({
-      establishmentName,
-      itemDetails: redeemedRecord.item_details,
-      waitressName
-    });
-
-    const smsResult = await gsmGatewayService.sendSms(redeemedRecord.client_phone, confirmationSms);
-
     return {
       success: true,
       message: 'Validation et déstockage effectués avec succès !',
-      record: redeemedRecord,
-      smsResult
+      record: redeemedRecord
     };
   }
 };

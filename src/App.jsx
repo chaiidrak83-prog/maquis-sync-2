@@ -858,7 +858,7 @@ export default function App() {
                 variant="navbar" 
                 onLaunchApp={() => setViewMode('MOBILE_POS')} 
               />
-              {viewMode === 'MOBILE_POS' ? (
+              {viewMode === 'MOBILE_POS' && (
                 <button
                   onClick={() => setViewMode('LANDING')}
                   className="btn btn-secondary"
@@ -871,26 +871,6 @@ export default function App() {
                   }}
                 >
                   ← Retour au site
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
-                  className="btn btn-primary btn-pulse"
-                  style={{
-                    padding: '9px 20px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    border: 'none',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    color: '#ffffff',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ✨ S'abonner (7j Gratuits)
                 </button>
               )}
             </div>
@@ -941,28 +921,11 @@ export default function App() {
           <p className="hero-desc">
             Prenez les commandes en 2 étapes sur mobile, suivez les stocks en direct et recevez votre bilan tous les soirs sur WhatsApp.
           </p>
-          <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="hero-actions" style={{ display: 'flex', justifyContent: 'center' }}>
             <PwaInstallButton 
               variant="hero" 
               onLaunchApp={() => setViewMode('MOBILE_POS')} 
             />
-            <button 
-              onClick={() => { setOnboardingInitialPlan('Accès'); setShowOnboardingModal(true); }}
-              className="btn btn-primary btn-lg"
-              style={{
-                background: 'linear-gradient(135deg, #F97316, #EA580C)',
-                color: '#ffffff',
-                border: 'none',
-                fontWeight: 800,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-              }}
-            >
-              ✨ S'abonner (7 Jours Gratuits)
-            </button>
-            <a href="#demo" className="btn btn-secondary btn-lg">Essayer le Simulateur Gratuit</a>
           </div>
         </div>
       </section>
@@ -1210,13 +1173,26 @@ export default function App() {
                 <div className="device-screen">
                   {/* Status Bar */}
                   <div className="screen-header">
-                    <span 
+                    <div 
                       onClick={handleSecretLogoTrigger}
-                      style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '12px', cursor: 'default', userSelect: 'none' }}
-                      title="MAQUISYNC MOBILE"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none' }}
+                      title="MAQUISYNC"
                     >
-                      ⚡ MAQUISYNC MOBILE
-                    </span>
+                      <div style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '5px',
+                        background: 'linear-gradient(135deg, #10B981, #059669)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Beer size={12} color="#FFFFFF" />
+                      </div>
+                      <span style={{ fontWeight: 800, fontSize: '12px', letterSpacing: '0.2px', color: 'var(--text-primary)' }}>
+                        MAQUIS<span style={{ color: 'var(--primary)' }}>SYNC</span>
+                      </span>
+                    </div>
                     <div className="status-bar-indicators" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {loggedInUserId && (
                         <button 
@@ -1234,7 +1210,7 @@ export default function App() {
                             fontSize: '10px', 
                             fontWeight: 700 
                           }}
-                          title="Avoirs & Consignations (SMS Gratuit)"
+                          title="Avoirs & Consignations"
                         >
                           <Ticket size={12} />
                           <span>Avoirs</span>
@@ -1260,10 +1236,33 @@ export default function App() {
                       // A. LOGGED OUT: SIGN IN / SIGN UP SCREEN
                       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
                         
+                        {/* Logo officiel MaquisSync */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '14px' }}>
+                          <div style={{
+                            width: '54px',
+                            height: '54px',
+                            borderRadius: '16px',
+                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
+                            marginBottom: '8px'
+                          }}>
+                            <Beer size={30} color="#FFFFFF" />
+                          </div>
+                          <div className="logo" style={{ fontSize: '22px', letterSpacing: '-0.5px' }}>
+                            MAQUIS<span>SYNC</span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>
+                            Caisse & Gestion 100% Hors-Ligne
+                          </span>
+                        </div>
+
                         {!isRegisteringMode ? (
                           // SIGN IN FORM
                           <>
-                            <h3 style={{ textAlign: 'center', marginBottom: '8px', fontSize: '18px', fontFamily: 'var(--font-heading)' }}>Connexion</h3>
+                            <h3 style={{ textAlign: 'center', marginBottom: '6px', fontSize: '16px', fontFamily: 'var(--font-heading)' }}>Connexion</h3>
                             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '16px' }}>
                               Saisissez votre numéro de téléphone et votre PIN pour accéder à votre interface.
                             </p>
@@ -2827,7 +2826,7 @@ export default function App() {
         }}
       />
 
-      {/* MODAL GESTION DES AVOIRS & CONSIGNATIONS VIA PASSERELLE GSM LOCALE */}
+      {/* MODAL GESTION DES AVOIRS & CONSIGNATIONS */}
       <CreditsConsignmentsModal
         isOpen={showCreditsModal}
         onClose={() => setShowCreditsModal(false)}
