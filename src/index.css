@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --bg-main: #F9FAFB;
+  --bg-main: #F8FAFC;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F3F4F6;
+  --bg-card-hover: #F1F5F9;
   --bg-input: #FFFFFF;
-  --border-color: #E5E7EB;
+  --border-color: #E2E8F0;
   --border-color-active: #F97316;
   
   --primary: #F97316; /* Professional Brand Orange */
@@ -20,9 +20,9 @@
   --danger-hover: #DC2626;
   --warning: #F59E0B;
   
-  --text-primary: #111827; /* Dark charcoal text */
-  --text-secondary: #4B5563; /* Medium grey text */
-  --text-muted: #9CA3AF;
+  --text-primary: #0F172A; /* Dark charcoal text */
+  --text-secondary: #334155; /* Medium grey text */
+  --text-muted: #64748B;
   
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-heading: 'Outfit', system-ui, -apple-system, sans-serif;
@@ -463,12 +463,8 @@ body {
   border-width: 14px;
 }
 .device-screen {
-  background-image: 
-    linear-gradient(rgba(249, 250, 251, 0.93), rgba(249, 250, 251, 0.97)),
-    url('/background.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-color: #FFFFFF;
+  color: #0F172A;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -479,11 +475,9 @@ body {
 
 /* Mobile Screen Specifics */
 .screen-header {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #FFFFFF;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #E2E8F0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -505,14 +499,14 @@ body {
   display: flex;
   flex-direction: column;
   padding: 16px;
+  background-color: #FFFFFF;
+  color: #0F172A;
 }
 
 /* Bottom Nav Simulator */
 .screen-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border-color);
+  background: #FFFFFF;
+  border-top: 1px solid #E2E8F0;
   display: flex;
   justify-content: space-around;
   padding: 8px 4px;
@@ -545,18 +539,19 @@ body {
   width: 100%;
 }
 .keypad-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
   border-radius: 12px;
-  color: var(--text-primary);
+  color: #0F172A;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 800;
   padding: 14px 0;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 .keypad-btn:hover {
   background: rgba(255, 255, 255, 0.08);
@@ -584,13 +579,14 @@ body {
   z-index: 50;
 }
 .ussd-box {
-  background: #1a1a24;
-  border: 1px solid var(--primary);
+  background: #FFFFFF;
+  border: 2px solid var(--primary);
   border-radius: 16px;
   width: 100%;
   padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
   animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  color: #0F172A;
 }
 .ussd-title {
   color: var(--primary);
@@ -601,12 +597,14 @@ body {
   text-align: center;
 }
 .ussd-syntax {
-  background: #1e293b;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
   border-radius: 8px;
   padding: 12px;
-  font-family: var(--mono);
-  font-size: 13px;
-  color: #f59e0b;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #D97706;
   text-align: center;
   margin: 12px 0;
   word-break: break-all;
@@ -1113,11 +1111,12 @@ body {
 }
 
 .owner-card {
-  background: #171724;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  padding: 10px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px;
   text-align: left;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 .owner-card-title {
@@ -1128,8 +1127,9 @@ body {
 }
 
 .owner-card-value {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
   margin-top: 4px;
 }
 

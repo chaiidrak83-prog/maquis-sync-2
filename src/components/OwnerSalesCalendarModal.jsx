@@ -145,19 +145,19 @@ export default function OwnerSalesCalendarModal({
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(15, 23, 42, 0.95)',
+      background: 'rgba(15, 23, 42, 0.6)',
       backdropFilter: 'blur(8px)',
       zIndex: 99999,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '16px',
-      color: '#ffffff',
+      color: '#0F172A',
       boxSizing: 'border-box'
     }}>
       <div style={{
-        background: '#1e293b',
-        border: '1px solid #334155',
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
         borderRadius: '24px',
         width: '100%',
         maxWidth: '520px',
@@ -170,11 +170,11 @@ export default function OwnerSalesCalendarModal({
         {/* En-tête modal */}
         <div style={{
           padding: '16px 20px',
-          borderBottom: '1px solid #334155',
+          borderBottom: '1px solid #E2E8F0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: '#0f172a'
+          background: '#F8FAFC'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
@@ -190,10 +190,10 @@ export default function OwnerSalesCalendarModal({
               <Calendar size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#ffffff' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>
                 Historique des Ventes
               </h3>
-              <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>
+              <p style={{ margin: 0, fontSize: '11px', color: '#64748B' }}>
                 Rapport journalier & journal d'audit
               </p>
             </div>
@@ -203,9 +203,9 @@ export default function OwnerSalesCalendarModal({
             type="button"
             onClick={onClose}
             style={{
-              background: '#334155',
+              background: '#F1F5F9',
               border: 'none',
-              color: '#ffffff',
+              color: '#0F172A',
               width: '32px',
               height: '32px',
               borderRadius: '8px',
@@ -222,8 +222,8 @@ export default function OwnerSalesCalendarModal({
         {/* Sélecteur de date & Raccourcis rapides */}
         <div style={{
           padding: '14px 18px',
-          background: '#1e293b',
-          borderBottom: '1px solid #334155',
+          background: '#FFFFFF',
+          borderBottom: '1px solid #E2E8F0',
           display: 'flex',
           flexDirection: 'column',
           gap: '10px'
@@ -234,9 +234,9 @@ export default function OwnerSalesCalendarModal({
               type="button"
               onClick={() => changeDateBy(-1)}
               style={{
-                background: '#334155',
+                background: '#F1F5F9',
                 border: 'none',
-                color: '#ffffff',
+                color: '#0F172A',
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
@@ -259,9 +259,9 @@ export default function OwnerSalesCalendarModal({
                   width: '100%',
                   padding: '8px 12px',
                   borderRadius: '12px',
-                  background: '#0f172a',
+                  background: '#F8FAFC',
                   border: '1px solid #475569',
-                  color: '#ffffff',
+                  color: '#0F172A',
                   fontSize: '13px',
                   fontWeight: 700,
                   outline: 'none',
@@ -274,9 +274,9 @@ export default function OwnerSalesCalendarModal({
               type="button"
               onClick={() => changeDateBy(1)}
               style={{
-                background: '#334155',
+                background: '#F1F5F9',
                 border: 'none',
-                color: '#ffffff',
+                color: '#0F172A',
                 width: '36px',
                 height: '36px',
                 borderRadius: '10px',
@@ -312,9 +312,7 @@ export default function OwnerSalesCalendarModal({
                     flex: 1,
                     padding: '6px 8px',
                     borderRadius: '8px',
-                    border: isSelected ? '1px solid #f97316' : '1px solid #334155',
-                    background: isSelected ? 'rgba(249, 115, 22, 0.2)' : '#0f172a',
-                    color: isSelected ? '#f97316' : '#94a3b8',
+                    border: isSelected ? '2px solid #F97316' : '1px solid #CBD5E1', background: isSelected ? '#FFF7ED' : '#FFFFFF', color: isSelected ? '#EA580C' : '#0F172A',
                     fontSize: '11px',
                     fontWeight: 700,
                     cursor: 'pointer'
@@ -329,7 +327,7 @@ export default function OwnerSalesCalendarModal({
           <div style={{
             fontSize: '12px',
             fontWeight: 800,
-            color: '#cbd5e1',
+            color: '#334155',
             textTransform: 'capitalize',
             textAlign: 'center'
           }}>
@@ -340,8 +338,8 @@ export default function OwnerSalesCalendarModal({
         {/* Navigation par onglets intérieurs */}
         <div style={{
           display: 'flex',
-          borderBottom: '1px solid #334155',
-          background: '#0f172a'
+          borderBottom: '1px solid #E2E8F0',
+          background: '#F8FAFC'
         }}>
           {[
             { key: 'SUMMARY', label: '📊 Recettes', badge: null },
@@ -374,7 +372,7 @@ export default function OwnerSalesCalendarModal({
                 {tab.badge !== null && tab.badge > 0 && (
                   <span style={{
                     background: tab.key === 'AUDIT' ? '#ef4444' : '#10b981',
-                    color: '#ffffff',
+                    color: '#0F172A',
                     fontSize: '9px',
                     padding: '1px 6px',
                     borderRadius: '10px',
@@ -391,7 +389,7 @@ export default function OwnerSalesCalendarModal({
         {/* Corps principal défilant */}
         <div style={{ padding: '16px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {isLoading ? (
-            <div style={{ textAlign: 'center', padding: '30px 0', color: '#94a3b8', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center', padding: '30px 0', color: '#64748B', fontSize: '13px' }}>
               Chargement des ventes du {selectedDate}...
             </div>
           ) : activeTab === 'SUMMARY' ? (
@@ -411,13 +409,13 @@ export default function OwnerSalesCalendarModal({
                 <div style={{
                   fontSize: '32px',
                   fontWeight: 900,
-                  color: '#ffffff',
+                  color: '#0F172A',
                   margin: '6px 0',
                   letterSpacing: '0.5px'
                 }}>
                   {metrics.totalRevenue.toLocaleString()} <span style={{ fontSize: '18px', color: '#10b981' }}>FCFA</span>
                 </div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#0f172a', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', color: '#e2e8f0', fontWeight: 700 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', color: '#e2e8f0', fontWeight: 700 }}>
                   <ShoppingBag size={13} style={{ color: '#10b981' }} />
                   <span>{metrics.orderCount} commandes encaissées</span>
                 </div>
@@ -425,8 +423,8 @@ export default function OwnerSalesCalendarModal({
 
               {/* Répartition Cash vs Mobile Money */}
               <div style={{
-                background: '#0f172a',
-                border: '1px solid #334155',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
                 borderRadius: '16px',
                 padding: '14px'
               }}>
@@ -439,7 +437,7 @@ export default function OwnerSalesCalendarModal({
                   </span>
                 </div>
 
-                <div style={{ height: '14px', width: '100%', background: '#1e293b', borderRadius: '10px', overflow: 'hidden', display: 'flex' }}>
+                <div style={{ height: '14px', width: '100%', background: '#FFFFFF', borderRadius: '10px', overflow: 'hidden', display: 'flex' }}>
                   <div style={{ width: `${metrics.cashPercent}%`, background: 'linear-gradient(90deg, #10b981, #059669)', transition: 'width 0.3s ease' }} />
                   <div style={{ width: `${metrics.momoPercent}%`, background: 'linear-gradient(90deg, #f97316, #ea580c)', transition: 'width 0.3s ease' }} />
                 </div>
@@ -447,8 +445,8 @@ export default function OwnerSalesCalendarModal({
 
               {/* Résumé express des articles les plus vendus */}
               <div style={{
-                background: '#0f172a',
-                border: '1px solid #334155',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
                 borderRadius: '16px',
                 padding: '14px'
               }}>
@@ -458,7 +456,7 @@ export default function OwnerSalesCalendarModal({
                 </div>
 
                 {metrics.itemsSoldList.length === 0 ? (
-                  <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '12px 0' }}>
+                  <div style={{ fontSize: '11px', color: '#64748B', textAlign: 'center', padding: '12px 0' }}>
                     Aucune vente enregistrée ce jour-là.
                   </div>
                 ) : (
@@ -480,11 +478,11 @@ export default function OwnerSalesCalendarModal({
                           }}>
                             {idx + 1}
                           </span>
-                          <span style={{ fontWeight: 700, color: '#ffffff' }}>{it.name} {it.volume && `(${it.volume})`}</span>
+                          <span style={{ fontWeight: 700, color: '#0F172A' }}>{it.name} {it.volume && `(${it.volume})`}</span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                           <span style={{ color: '#10b981', fontWeight: 800 }}>x{it.totalQuantity}</span>
-                          <span style={{ color: '#94a3b8', fontSize: '11px' }}>{it.totalRevenue.toLocaleString()} F</span>
+                          <span style={{ color: '#64748B', fontSize: '11px' }}>{it.totalRevenue.toLocaleString()} F</span>
                         </div>
                       </div>
                     ))}
@@ -495,19 +493,19 @@ export default function OwnerSalesCalendarModal({
           ) : activeTab === 'ITEMS' ? (
             /* DÉTAIL COMPLET DES ARTICLES VENDUS */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+              <div style={{ fontSize: '12px', color: '#64748B' }}>
                 Total des unités vendues : <strong style={{ color: '#10b981' }}>{metrics.totalItemsCount}</strong>
               </div>
 
               {metrics.itemsSoldList.length === 0 ? (
-                <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '30px 0' }}>
+                <div style={{ fontSize: '12px', color: '#64748B', textAlign: 'center', padding: '30px 0' }}>
                   Aucun article vendu pour cette date.
                 </div>
               ) : (
                 metrics.itemsSoldList.map((it, idx) => (
                   <div key={idx} style={{
-                    background: '#0f172a',
-                    border: '1px solid #334155',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
                     borderRadius: '14px',
                     padding: '12px 14px',
                     display: 'flex',
@@ -515,10 +513,10 @@ export default function OwnerSalesCalendarModal({
                     alignItems: 'center'
                   }}>
                     <div>
-                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#ffffff' }}>
+                      <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>
                         {it.name} <span style={{ fontSize: '11px', color: '#f97316' }}>{it.volume}</span>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
                         Prix unitaire : {it.unitPrice.toLocaleString()} F CFA
                       </div>
                     </div>
@@ -527,7 +525,7 @@ export default function OwnerSalesCalendarModal({
                       <div style={{ fontSize: '16px', fontWeight: 900, color: '#10b981' }}>
                         x{it.totalQuantity}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 700 }}>
+                      <div style={{ fontSize: '11px', color: '#334155', fontWeight: 700 }}>
                         {it.totalRevenue.toLocaleString()} F
                       </div>
                     </div>
@@ -538,18 +536,18 @@ export default function OwnerSalesCalendarModal({
           ) : (
             /* JOURNAL D'AUDIT DU JOUR SÉLECTIONNÉ */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+              <div style={{ fontSize: '12px', color: '#64748B' }}>
                 Modifications & annulations de commandes effectuées par les gérants ce jour-là :
               </div>
 
               {dayAuditLogs.length === 0 ? (
                 <div style={{
-                  background: '#0f172a',
-                  border: '1px solid #334155',
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
                   borderRadius: '14px',
                   padding: '24px',
                   textAlign: 'center',
-                  color: '#94a3b8',
+                  color: '#64748B',
                   fontSize: '12px'
                 }}>
                   ✓ Aucune modification ou anomalie sur les commandes pour cette date.
@@ -557,8 +555,8 @@ export default function OwnerSalesCalendarModal({
               ) : (
                 dayAuditLogs.map((log) => (
                   <div key={log.id} style={{
-                    background: '#0f172a',
-                    border: '1px solid #334155',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
                     borderLeft: log.action === 'CANCELLED' ? '4px solid #ef4444' : '4px solid #f59e0b',
                     borderRadius: '12px',
                     padding: '12px',
@@ -577,17 +575,17 @@ export default function OwnerSalesCalendarModal({
                       }}>
                         {log.action === 'CANCELLED' ? 'COMMANDE ANNULÉE' : 'COMMANDE MODIFIÉE'}
                       </span>
-                      <span style={{ fontSize: '10px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '10px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Clock size={11} />
                         {new Date(log.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '12px', color: '#ffffff', fontWeight: 700, marginTop: '2px' }}>
+                    <div style={{ fontSize: '12px', color: '#0F172A', fontWeight: 700, marginTop: '2px' }}>
                       Gérant : <strong>{log.manager_name}</strong>
                     </div>
 
-                    <div style={{ fontSize: '11px', color: '#cbd5e1' }}>
+                    <div style={{ fontSize: '11px', color: '#334155' }}>
                       Motif : <em>"{log.reason}"</em>
                     </div>
 
@@ -597,7 +595,7 @@ export default function OwnerSalesCalendarModal({
                       marginTop: '4px',
                       padding: '4px 8px',
                       borderRadius: '6px',
-                      background: '#1e293b',
+                      background: '#FFFFFF',
                       color: log.action === 'CANCELLED' ? '#ef4444' : '#10b981'
                     }}>
                       Montant : {log.old_total} F ➔ {log.new_total} F (Écart : {log.new_total - log.old_total} F)
@@ -612,8 +610,8 @@ export default function OwnerSalesCalendarModal({
         {/* Pied de page */}
         <div style={{
           padding: '12px 18px',
-          borderTop: '1px solid #334155',
-          background: '#0f172a',
+          borderTop: '1px solid #E2E8F0',
+          background: '#F8FAFC',
           display: 'flex',
           justifyContent: 'flex-end'
         }}>
@@ -623,9 +621,9 @@ export default function OwnerSalesCalendarModal({
             style={{
               padding: '8px 18px',
               borderRadius: '10px',
-              background: '#334155',
+              background: '#F1F5F9',
               border: 'none',
-              color: '#ffffff',
+              color: '#0F172A',
               fontSize: '12px',
               fontWeight: 800,
               cursor: 'pointer'

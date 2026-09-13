@@ -272,7 +272,7 @@ export default function WebQrScanner({ onScan, onClose, title = "Scanner QR Code
           </div>
           <div>
             <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800 }}>{title}</h4>
-            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+            <span style={{ fontSize: '11px', color: '#475569' }}>
               Pointez la caméra vers le QR Code officiel
             </span>
           </div>

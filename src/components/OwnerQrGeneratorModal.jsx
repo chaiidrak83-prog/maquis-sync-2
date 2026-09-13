@@ -69,13 +69,13 @@ export default function OwnerQrGeneratorModal({
       alignItems: 'center',
       justifyContent: 'center',
       padding: '16px',
-      color: '#fff',
+      color: '#0F172A',
       boxSizing: 'border-box'
     }}>
       {/* Modal Container */}
       <div style={{
-        background: '#121218',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
         borderRadius: '20px',
         width: '100%',
         maxWidth: isFullscreen ? '100vw' : '480px',
@@ -92,11 +92,11 @@ export default function OwnerQrGeneratorModal({
         {/* En-tête */}
         <div style={{
           padding: '14px 18px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid #E2E8F0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'rgba(255,255,255,0.02)'
+          background: '#F8FAFC'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
@@ -113,7 +113,7 @@ export default function OwnerQrGeneratorModal({
             </div>
             <div>
               <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800 }}>Générateur QR Code Officiel</h4>
-              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+              <span style={{ fontSize: '11px', color: '#475569' }}>
                 {establishmentName}
               </span>
             </div>
@@ -142,12 +142,12 @@ export default function OwnerQrGeneratorModal({
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(255,255,255,0.05)',
+                background: '#F1F5F9',
                 border: 'none',
                 borderRadius: '50%',
                 width: '32px',
                 height: '32px',
-                color: '#fff',
+                color: '#0F172A',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -272,7 +272,7 @@ export default function OwnerQrGeneratorModal({
               alignItems: 'center',
               gap: '6px',
               background: '#09090d',
-              color: '#fff',
+              color: '#0F172A',
               padding: '6px 14px',
               borderRadius: '20px',
               marginBottom: '12px',
@@ -366,7 +366,7 @@ export default function OwnerQrGeneratorModal({
           borderTop: '1px solid rgba(255,255,255,0.06)',
           display: 'flex',
           gap: '8px',
-          background: 'rgba(255,255,255,0.02)'
+          background: '#F8FAFC'
         }}>
           <button
             type="button"

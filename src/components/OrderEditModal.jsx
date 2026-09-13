@@ -164,19 +164,19 @@ export default function OrderEditModal({
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(5, 5, 8, 0.9)',
+      background: 'rgba(15, 23, 42, 0.6)',
       backdropFilter: 'blur(8px)',
       zIndex: 99999,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '16px',
-      color: '#fff',
+      color: '#0F172A',
       boxSizing: 'border-box'
     }}>
       <div style={{
-        background: '#12121a',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
         borderRadius: '16px',
         width: '100%',
         maxWidth: '440px',
@@ -193,7 +193,7 @@ export default function OrderEditModal({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'rgba(255,255,255,0.02)'
+          background: '#FFFFFF'
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -212,7 +212,7 @@ export default function OrderEditModal({
               borderRadius: '50%',
               width: '32px',
               height: '32px',
-              color: '#fff',
+              color: '#0F172A',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -256,7 +256,7 @@ export default function OrderEditModal({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    border: '1px solid #E2E8F0',
                     borderRadius: '10px',
                     padding: '8px 10px'
                   }}
@@ -442,8 +442,8 @@ export default function OrderEditModal({
 
           {/* Différentiel financier */}
           <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
             borderRadius: '10px',
             padding: '10px 12px',
             display: 'flex',

@@ -48,7 +48,7 @@ export default function SimplifiedDashboard({
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
-      color: '#fff',
+      color: '#0F172A',
       fontFamily: 'var(--font-body, system-ui, sans-serif)'
     }}>
       {/* Barre supérieure avec bouton de retour à la vue détaillée */}
@@ -56,8 +56,8 @@ export default function SimplifiedDashboard({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: '#FFFFFF', border: '1px solid #E2E8F0',
+        border: '1px solid #E2E8F0',
         borderRadius: '12px',
         padding: '8px 12px'
       }}>
@@ -97,7 +97,7 @@ export default function SimplifiedDashboard({
         <div style={{
           fontSize: '32px',
           fontWeight: 900,
-          color: '#ffffff',
+          color: '#0F172A',
           margin: '6px 0',
           letterSpacing: '0.5px',
           textShadow: '0 2px 10px rgba(16, 185, 129, 0.4)'
@@ -123,8 +123,8 @@ export default function SimplifiedDashboard({
 
       {/* 2. Jauge Visuelle Espèces vs Mobile Money */}
       <div style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: '#FFFFFF', border: '1px solid #E2E8F0',
+        border: '1px solid #E2E8F0',
         borderRadius: '16px',
         padding: '12px'
       }}>
@@ -147,7 +147,7 @@ export default function SimplifiedDashboard({
         <div style={{
           height: '14px',
           width: '100%',
-          background: 'rgba(255,255,255,0.05)',
+          background: '#FFFFFF', border: '1px solid #E2E8F0',
           borderRadius: '10px',
           overflow: 'hidden',
           display: 'flex'
@@ -169,8 +169,8 @@ export default function SimplifiedDashboard({
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
         {/* Top Boissons */}
         <div style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: '#FFFFFF', border: '1px solid #E2E8F0',
+          border: '1px solid #E2E8F0',
           borderRadius: '16px',
           padding: '12px'
         }}>
@@ -213,8 +213,8 @@ export default function SimplifiedDashboard({
 
         {/* Équipe en service */}
         <div style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: '#FFFFFF', border: '1px solid #E2E8F0',
+          border: '1px solid #E2E8F0',
           borderRadius: '16px',
           padding: '12px'
         }}>

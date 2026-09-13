@@ -5,7 +5,7 @@ import { Plus, Minus, Trash2, DollarSign, Smartphone } from 'lucide-react';
 const PRESET_SVGS = {
   biere_blonde: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <rect width="100" height="160" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#d97706" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#b45309" />
       <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#f59e0b" />
@@ -16,7 +16,7 @@ const PRESET_SVGS = {
   ),
   biere_verte: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <rect width="100" height="160" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#059669" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#047857" />
       <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#10b981" />
@@ -27,7 +27,7 @@ const PRESET_SVGS = {
   ),
   stout_dark: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <rect width="100" height="160" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#451a03" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#27150a" />
       <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#334155" />
@@ -38,7 +38,7 @@ const PRESET_SVGS = {
   ),
   sucrerie_rouge: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <rect width="100" height="160" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#dc2626" />
       <rect x="40" y="34" width="20" height="24" rx="4" fill="#991b1b" />
       <path d="M30 58 Q24 72 24 94 L24 136 Q24 146 36 146 L64 146 Q76 146 76 136 L76 94 Q76 72 70 58 Z" fill="#ef4444" />
@@ -49,7 +49,7 @@ const PRESET_SVGS = {
   ),
   eau_bleue: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <rect width="100" height="160" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
       <path d="M42 10 h16 v24 h-16 Z" fill="#0284c7" />
       <rect x="40" y="32" width="20" height="24" rx="4" fill="#0369a1" />
       <path d="M30 56 Q24 70 24 92 L24 138 Q24 148 36 148 L64 148 Q76 148 76 138 L76 92 Q76 70 70 56 Z" fill="#0ea5e9" />
@@ -60,7 +60,7 @@ const PRESET_SVGS = {
   ),
   vin_liqueur: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <rect width="100" height="160" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
       <path d="M44 8 h12 v30 h-12 Z" fill="#831843" />
       <rect x="42" y="38" width="16" height="14" rx="2" fill="#be185d" />
       <path d="M32 52 Q26 70 26 95 L26 140 Q26 148 36 148 L64 148 Q74 148 74 140 L74 95 Q74 70 68 52 Z" fill="#9d174d" />
@@ -70,7 +70,7 @@ const PRESET_SVGS = {
   ),
   plat_grillade: (
     <svg viewBox="0 0 100 160" width="100%" height="100%">
-      <rect width="100" height="160" rx="16" fill="#1e293b" />
+      <rect width="100" height="160" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
       <ellipse cx="50" cy="95" rx="42" ry="26" fill="#ea580c" />
       <ellipse cx="50" cy="92" rx="36" ry="20" fill="#fed7aa" />
       <ellipse cx="42" cy="90" rx="18" ry="10" fill="#c2410c" />
@@ -298,9 +298,9 @@ export default function VisualCatalogPos({
               style={{
                 padding: '8px 2px',
                 borderRadius: '12px',
-                border: isActive ? `2px solid ${cat.color}` : '1px solid #334155',
-                background: isActive ? `${cat.color}25` : '#1e293b',
-                color: isActive ? '#ffffff' : '#94a3b8',
+                border: isActive ? `2px solid ${cat.color}` : '1px solid #CBD5E1',
+                background: isActive ? `${cat.color}20` : '#FFFFFF',
+                color: isActive ? `${cat.color}` : '#0F172A',
                 fontWeight: 900,
                 fontSize: '10px',
                 display: 'flex',
@@ -345,15 +345,15 @@ export default function VisualCatalogPos({
               }}
               style={{
                 position: 'relative',
-                background: visual.bg,
-                border: qty > 0 ? `3px solid ${visual.borderColor}` : '1px solid #334155',
+                background: '#FFFFFF',
+                border: qty > 0 ? `3px solid ${visual.borderColor}` : '2px solid #E2E8F0',
                 borderRadius: '18px',
                 padding: '12px 10px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                boxShadow: qty > 0 ? `0 0 16px ${visual.borderColor}66` : '0 4px 12px rgba(0,0,0,0.4)',
+                boxShadow: qty > 0 ? `0 0 16px ${visual.borderColor}40` : '0 2px 8px rgba(0,0,0,0.05)',
                 opacity: isOutOfStock ? 0.35 : 1,
                 minHeight: '150px',
                 userSelect: 'none',
@@ -371,10 +371,10 @@ export default function VisualCatalogPos({
               }}>
                 <span style={{
                   fontSize: '14px',
-                  background: 'rgba(15, 23, 42, 0.8)',
+                  background: '#F1F5F9',
                   padding: '2px 8px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255,255,255,0.1)'
+                  border: '1px solid #CBD5E1'
                 }}>
                   {visual.picto}
                 </span>
@@ -383,11 +383,11 @@ export default function VisualCatalogPos({
                   <span style={{
                     fontSize: '11px',
                     fontWeight: 800,
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    color: '#e2e8f0',
+                    background: '#F1F5F9',
+                    color: '#0F172A',
                     padding: '2px 8px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(255,255,255,0.1)'
+                    border: '1px solid #CBD5E1'
                   }}>
                     {p.volume}
                   </span>
@@ -456,16 +456,16 @@ export default function VisualCatalogPos({
                 marginTop: '4px'
               }}>
                 <div style={{
-                  fontSize: '16px',
+                  fontSize: '17px',
                   fontWeight: 900,
-                  color: '#ffffff',
-                  background: 'rgba(15, 23, 42, 0.9)',
+                  color: '#0F172A',
+                  background: '#F8FAFC',
                   padding: '4px 10px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255,255,255,0.15)',
+                  border: '1px solid #CBD5E1',
                   letterSpacing: '0.5px'
                 }}>
-                  {p.price} <span style={{ fontSize: '11px', color: '#facc15' }}>F</span>
+                  {p.price} <span style={{ fontSize: '12px', color: '#EA580C', fontWeight: 900 }}> F</span>
                 </div>
 
                 {/* Bouton décrémenter si article dans le panier */}
@@ -519,14 +519,14 @@ export default function VisualCatalogPos({
 
       {/* 3. Bandeau Panier & Règlements Tactiles Instantanés */}
       <div style={{
-        background: '#1e293b',
-        border: '1px solid #334155',
+        background: '#FFFFFF',
+        border: '2px solid #E2E8F0',
         borderRadius: '18px',
         padding: '12px 14px',
         display: 'flex',
         flexDirection: 'column',
         gap: '10px',
-        boxShadow: '0 8px 20px rgba(0,0,0,0.5)'
+        boxShadow: '0 4px 16px rgba(0,0,0,0.06)'
       }}>
         {/* Total visuel gros format */}
         <div style={{
@@ -536,9 +536,9 @@ export default function VisualCatalogPos({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{
-              background: 'rgba(16, 185, 129, 0.2)',
-              border: '1px solid #10b981',
-              color: '#34d399',
+              background: '#ECFDF5',
+              border: '1px solid #10B981',
+              color: '#059669',
               padding: '4px 10px',
               borderRadius: '10px',
               fontSize: '13px',
@@ -589,8 +589,8 @@ export default function VisualCatalogPos({
               padding: '14px 8px',
               borderRadius: '14px',
               border: 'none',
-              background: cartTotalQty === 0 ? '#334155' : 'linear-gradient(135deg, #10b981, #059669)',
-              color: cartTotalQty === 0 ? '#94a3b8' : '#ffffff',
+              background: cartTotalQty === 0 ? '#E2E8F0' : 'linear-gradient(135deg, #10B981, #059669)',
+              color: cartTotalQty === 0 ? '#94A3B8' : '#FFFFFF',
               fontWeight: 900,
               fontSize: '13px',
               display: 'flex',
@@ -613,8 +613,8 @@ export default function VisualCatalogPos({
               padding: '14px 8px',
               borderRadius: '14px',
               border: 'none',
-              background: cartTotalQty === 0 ? '#334155' : 'linear-gradient(135deg, #f97316, #ea580c)',
-              color: cartTotalQty === 0 ? '#94a3b8' : '#ffffff',
+              background: cartTotalQty === 0 ? '#E2E8F0' : 'linear-gradient(135deg, #F97316, #EA580C)',
+              color: cartTotalQty === 0 ? '#94A3B8' : '#FFFFFF',
               fontWeight: 900,
               fontSize: '13px',
               display: 'flex',

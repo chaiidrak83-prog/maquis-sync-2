@@ -306,6 +306,7 @@ export default function App() {
   const [newProductStock, setNewProductStock] = useState('');
   const [newProductImageKey, setNewProductImageKey] = useState('beer_gold');
   const [newProductCategory, setNewProductCategory] = useState('BEER');
+  const [showAddProductForm, setShowAddProductForm] = useState(false);
   const [newProductPhotoFile, setNewProductPhotoFile] = useState(null);
   const [newProductPhotoPreview, setNewProductPhotoPreview] = useState(null);
   const [isUploadingProduct, setIsUploadingProduct] = useState(false);
@@ -1100,6 +1101,27 @@ export default function App() {
     }
   };
 
+  
+  const handleRestoreSampleDrinks = () => {
+    const sampleProducts = [
+      { id: 'p1', name: 'Brakina', volume: '65cl', price: 900, initial_stock: 120, current_stock: 120, category: 'BEER', image_base64: drinkImages.beer_gold, is_active: true },
+      { id: 'p2', name: 'Sobebra', volume: '65cl', price: 1000, initial_stock: 80, current_stock: 80, category: 'BEER', image_base64: drinkImages.beer_green, is_active: true },
+      { id: 'p3', name: 'Guinness', volume: '33cl', price: 1200, initial_stock: 15, current_stock: 15, category: 'BEER', image_base64: drinkImages.stout_dark, is_active: true },
+      { id: 'p4', name: 'Laafi (Eau)', volume: '1.5L', price: 500, initial_stock: 40, current_stock: 40, category: 'WATER', image_base64: drinkImages.water_blue, is_active: true },
+      { id: 'p5', name: 'Coca-Cola', volume: '33cl', price: 600, initial_stock: 50, current_stock: 50, category: 'SODA', image_base64: drinkImages.beer_gold, is_active: true },
+      { id: 'p6', name: 'Poulet Braisé', volume: 'Portion', price: 3500, initial_stock: 20, current_stock: 20, category: 'DISH', image_base64: drinkImages.beer_gold, is_active: true }
+    ];
+    setProducts(sampleProducts);
+  };
+
+  const handleDeleteProduct = (id) => {
+    if (!window.confirm("Voulez-vous vraiment retirer cet article du catalogue ?")) return;
+    setProducts(prev => prev.filter(p => p.id !== id));
+    if (isSupabaseConfigured() && id && id.length > 20) {
+      productService.deleteProduct(id).catch(err => console.warn('Erreur suppression produit:', err));
+    }
+  };
+
   // Owner Financial Stats with Filter: Jour / Semaine / Mois
   const ownerFinancials = useMemo(() => {
     const dayRevenue = sales.reduce((sum, s) => sum + s.total_amount, 0) + 
@@ -1130,7 +1152,7 @@ export default function App() {
       {impersonatedEstablishment && (
         <div style={{
           background: 'linear-gradient(90deg, #dc2626, #b91c1c)',
-          color: '#ffffff',
+          color: '#0F172A',
           padding: '10px 24px',
           display: 'flex',
           justifyContent: 'space-between',
@@ -1156,7 +1178,7 @@ export default function App() {
             style={{
               background: 'rgba(255, 255, 255, 0.25)',
               border: '1px solid rgba(255, 255, 255, 0.5)',
-              color: '#ffffff',
+              color: '#0F172A',
               padding: '4px 14px',
               borderRadius: '6px',
               fontSize: '12px',
@@ -1224,7 +1246,7 @@ export default function App() {
                     border: 'none',
                     borderRadius: '10px',
                     background: 'linear-gradient(135deg, #10b981, #059669)',
-                    color: '#ffffff',
+                    color: '#0F172A',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -1292,7 +1314,7 @@ export default function App() {
               className="btn btn-primary btn-lg"
               style={{
                 background: 'linear-gradient(135deg, #F97316, #EA580C)',
-                color: '#ffffff',
+                color: '#0F172A',
                 border: 'none',
                 fontWeight: 800,
                 display: 'inline-flex',
@@ -1728,7 +1750,7 @@ export default function App() {
                                     padding: '8px 6px',
                                     borderRadius: '8px',
                                     border: regRoleInput === 'WAITRESS' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                                    background: regRoleInput === 'WAITRESS' ? 'rgba(217, 160, 91, 0.15)' : 'rgba(255,255,255,0.02)',
+                                    background: regRoleInput === 'WAITRESS' ? 'rgba(217, 160, 91, 0.15)' : '#F8FAFC',
                                     color: regRoleInput === 'WAITRESS' ? 'var(--primary)' : 'var(--text-secondary)',
                                     fontWeight: 'bold',
                                     fontSize: '11px',
@@ -1750,7 +1772,7 @@ export default function App() {
                                     padding: '8px 6px',
                                     borderRadius: '8px',
                                     border: regRoleInput === 'MANAGER' ? '2px solid var(--secondary)' : '1px solid var(--border-color)',
-                                    background: regRoleInput === 'MANAGER' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.02)',
+                                    background: regRoleInput === 'MANAGER' ? 'rgba(16, 185, 129, 0.15)' : '#F8FAFC',
                                     color: regRoleInput === 'MANAGER' ? 'var(--secondary)' : 'var(--text-secondary)',
                                     fontWeight: 'bold',
                                     fontSize: '11px',
@@ -1884,9 +1906,9 @@ export default function App() {
                             </div>
 
                             <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
-                              <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase' }}>MRR GLOBAL DU SAAS</div>
+                              <div style={{ fontSize: '10px', color: '#64748B', textTransform: 'uppercase' }}>MRR GLOBAL DU SAAS</div>
                               <div style={{ fontSize: '22px', fontWeight: 900, color: '#10b981' }}>29 800 F CFA</div>
-                              <div style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px' }}>4 maquis abonnés • 1 en attente</div>
+                              <div style={{ fontSize: '11px', color: '#334155', marginTop: '4px' }}>4 maquis abonnés • 1 en attente</div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1894,7 +1916,7 @@ export default function App() {
                                 onClick={() => setViewMode('SUPER_ADMIN')}
                                 style={{
                                   background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                  color: '#ffffff',
+                                  color: '#0F172A',
                                   border: 'none',
                                   borderRadius: '8px',
                                   padding: '12px',
@@ -1911,9 +1933,9 @@ export default function App() {
                                 Ouvrir la Console Complète ➔
                               </button>
 
-                              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '10px', fontSize: '11px' }}>
+                              <div style={{ background: '#F8FAFC', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '10px', fontSize: '11px' }}>
                                 <div style={{ fontWeight: 800, color: '#f8fafc', marginBottom: '4px' }}>⏳ Demande en attente :</div>
-                                <div style={{ color: '#cbd5e1' }}>Restaurant Oasis Tropical</div>
+                                <div style={{ color: '#334155' }}>Restaurant Oasis Tropical</div>
                                 <div style={{ color: '#10b981', fontWeight: 700 }}>19 900 F CFA (Formule Premium)</div>
                               </div>
                             </div>
@@ -1937,7 +1959,7 @@ export default function App() {
                                 <button 
                                   onClick={() => setIsSimplifiedDashboard(!isSimplifiedDashboard)} 
                                   className="btn btn-secondary" 
-                                  style={{ padding: '3px 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: isSimplifiedDashboard ? 'var(--primary)' : 'rgba(255,255,255,0.1)', color: isSimplifiedDashboard ? 'var(--primary)' : '#cbd5e1' }}
+                                  style={{ padding: '3px 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: isSimplifiedDashboard ? 'var(--primary)' : '#CBD5E1', color: isSimplifiedDashboard ? 'var(--primary)' : '#cbd5e1' }}
                                 >
                                   <Layers size={11} /> {isSimplifiedDashboard ? 'Vue Détaillée' : 'Vue Simplifiée ⚡'}
                                 </button>
@@ -1995,7 +2017,7 @@ export default function App() {
                                     {users.some(u => u.role === 'MANAGER' && u.status === 'PENDING') && (
                                       <span style={{ 
                                         background: 'var(--danger)', 
-                                        color: '#fff', 
+                                        color: '#0F172A', 
                                         fontSize: '9px', 
                                         padding: '1px 5px', 
                                         borderRadius: '10px',
@@ -2061,7 +2083,7 @@ export default function App() {
                                 </div>
 
                                 {/* Config exclusive owner section */}
-                                <div className="glass-card" style={{ padding: '12px', marginBottom: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <div className="glass-card" style={{ padding: '12px', marginBottom: '12px', background: '#FFFFFF', borderColor: 'rgba(255,255,255,0.06)' }}>
                                   <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <Settings size={12} /> Réglage USSD Exclusif
                                   </h5>
@@ -2070,7 +2092,7 @@ export default function App() {
                                     <input 
                                       type="text" 
                                       className="input-field" 
-                                      style={{ fontSize: '11px', padding: '6px', background: '#1e293b' }}
+                                      style={{ fontSize: '12px', padding: '8px 10px', background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', borderRadius: '8px', fontWeight: 600 }}
                                       value={ussdTemplate}
                                       onChange={(e) => setUssdTemplate(e.target.value)}
                                     />
@@ -2099,7 +2121,7 @@ export default function App() {
                                 </div>
 
                                 {/* WhatsApp daily report settings */}
-                                <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: '#FFFFFF', borderColor: 'rgba(255,255,255,0.06)' }}>
                                   <h5 style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <Send size={12} /> Rapport Automatique WhatsApp
                                   </h5>
@@ -2121,7 +2143,7 @@ export default function App() {
                                         <input 
                                           type="text" 
                                           className="input-field" 
-                                          style={{ fontSize: '11px', padding: '4px 6px', background: '#1e293b', flex: 1 }}
+                                          style={{ fontSize: '12px', padding: '8px 10px', background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', borderRadius: '8px', flex: 1 }}
                                           value={whatsappNumber}
                                           onChange={(e) => setWhatsappNumber(e.target.value)}
                                           placeholder="+226 65 61 34 72"
@@ -2144,7 +2166,7 @@ export default function App() {
                                 </div>
 
                                   {/* Générateur de QR Code Officiel d'Établissement */}
-                                  <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(217, 160, 91, 0.25)', marginBottom: '12px' }}>
+                                  <div className="glass-card" style={{ padding: '12px', marginTop: '12px', background: '#FFFFFF', borderColor: 'rgba(217, 160, 91, 0.25)', marginBottom: '12px' }}>
                                     <h5 style={{ margin: '0 0 6px 0', fontSize: '11px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       <QrCode size={13} /> QR Code Officiel Établissement
                                     </h5>
@@ -2165,7 +2187,7 @@ export default function App() {
                               ) : ownerTab === 'audit' ? (
                                 /* TAB AUDIT : JOURNAL DES MODIFICATIONS DE COMMANDES */
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                  <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)' }}>
+                                  <div className="glass-card" style={{ padding: '12px', background: '#FFFFFF' }}>
                                     <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       <ShieldAlert size={14} /> Journal d'Audit des Commandes
                                     </h5>
@@ -2181,7 +2203,7 @@ export default function App() {
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
                                         {orderAuditLogs.map(log => (
                                           <div key={log.id} style={{
-                                            background: 'rgba(255,255,255,0.02)',
+                                            background: '#F8FAFC',
                                             border: '1px solid rgba(255,255,255,0.06)',
                                             borderRadius: '8px',
                                             padding: '8px 10px',
@@ -2219,7 +2241,7 @@ export default function App() {
                               /* TAB 2: GÉRANTS & ÉQUIPE (VALIDATION PAR LE PROPRIÉTAIRE) */
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {/* 1. Demandes Gérants en attente */}
-                                <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderColor: users.some(u => u.role === 'MANAGER' && u.status === 'PENDING') ? 'var(--secondary)' : 'rgba(255,255,255,0.08)' }}>
+                                <div className="glass-card" style={{ padding: '12px', background: '#FFFFFF', borderColor: users.some(u => u.role === 'MANAGER' && u.status === 'PENDING') ? 'var(--secondary)' : '#CBD5E1' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                     <h5 style={{ margin: 0, fontSize: '12px', color: 'var(--secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       <Users size={13} /> Gérants en Attente ({users.filter(u => u.role === 'MANAGER' && u.status === 'PENDING').length})
@@ -2275,13 +2297,13 @@ export default function App() {
                                 </div>
 
                                 {/* 2. Gérants Validés du Maquis */}
-                                <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.08)' }}>
+                                <div className="glass-card" style={{ padding: '12px', background: '#FFFFFF', borderColor: '#CBD5E1' }}>
                                   <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <ShieldCheck size={13} /> Gérants Validés ({users.filter(u => u.role === 'MANAGER' && u.status === 'VALIDATED').length})
                                   </h5>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     {users.filter(u => u.role === 'MANAGER' && u.status === 'VALIDATED').map(mgr => (
-                                      <div key={mgr.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', opacity: mgr.is_active ? 1 : 0.6 }}>
+                                      <div key={mgr.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', opacity: mgr.is_active ? 1 : 0.6 }}>
                                         <div>
                                           <div style={{ fontWeight: 'bold', fontSize: '12px', textDecoration: mgr.is_active ? 'none' : 'line-through' }}>{mgr.name}</div>
                                           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Tél : {mgr.phone}</div>
@@ -2307,7 +2329,7 @@ export default function App() {
                                 </div>
 
                                 {/* 3. Supervision Serveuses */}
-                                <div className="glass-card" style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderColor: 'rgba(255,255,255,0.08)' }}>
+                                <div className="glass-card" style={{ padding: '12px', background: '#FFFFFF', borderColor: '#CBD5E1' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                     <h5 style={{ margin: 0, fontSize: '12px', color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       🍹 Équipe Serveuses ({activeWaitressesCount} actives)
@@ -2321,7 +2343,7 @@ export default function App() {
                                   </p>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
                                     {users.filter(u => u.role === 'WAITRESS').map(w => (
-                                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
                                         <div>
                                           <div style={{ fontWeight: 'bold', fontSize: '11px' }}>{w.name}</div>
                                           <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Tél : {w.phone}</div>
@@ -2375,7 +2397,7 @@ export default function App() {
                                 <button 
                                   onClick={() => setIsSimplifiedDashboard(!isSimplifiedDashboard)} 
                                   className="btn btn-secondary" 
-                                  style={{ padding: '3px 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: isSimplifiedDashboard ? 'var(--secondary)' : 'rgba(255,255,255,0.1)', color: isSimplifiedDashboard ? 'var(--secondary)' : '#cbd5e1' }}
+                                  style={{ padding: '3px 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: isSimplifiedDashboard ? 'var(--secondary)' : '#CBD5E1', color: isSimplifiedDashboard ? 'var(--secondary)' : '#cbd5e1' }}
                                 >
                                   <Layers size={11} /> {isSimplifiedDashboard ? 'Détaillée' : 'Simplifiée ⚡'}
                                 </button>
@@ -2466,7 +2488,7 @@ export default function App() {
                                         <div 
                                           key={s.id} 
                                           style={{
-                                            background: s.status === 'CANCELLED' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.02)',
+                                            background: s.status === 'CANCELLED' ? 'rgba(239, 68, 68, 0.05)' : '#F8FAFC',
                                             border: s.status === 'CANCELLED' ? '1px dashed rgba(239, 68, 68, 0.3)' : s.status === 'MODIFIED' ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(255,255,255,0.04)',
                                             borderRadius: '8px',
                                             padding: '8px 10px',
@@ -2534,7 +2556,7 @@ export default function App() {
                                         <span>Journal d'audit des modifications ({orderAuditLogs.length})</span>
                                       </div>
                                       {orderAuditLogs.slice(0, 3).map(log => (
-                                        <div key={log.id} style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '2px 0', borderBottom: '1px dashed rgba(255,255,255,0.03)' }}>
+                                        <div key={log.id} style={{ fontSize: '10px', color: 'var(--text-secondary)', padding: '2px 0', borderBottom: '1px dashed #E2E8F0' }}>
                                           <strong>{log.manager_name}</strong> : {log.action} (#{log.sale_id.slice(-6)}) - "{log.reason}" ({log.old_total} F ➔ {log.new_total} F)
                                         </div>
                                       ))}
@@ -2550,7 +2572,7 @@ export default function App() {
                                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0' }}>Aucune inscription en attente.</p>
                                 ) : (
                                   users.filter(u => u.role === 'WAITRESS' && u.status === 'PENDING').map(u => (
-                                    <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                    <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                                       <div>
                                         <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{u.name}</div>
                                         <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Tél : {u.phone}</div>
@@ -2578,7 +2600,7 @@ export default function App() {
 
                                 <h5 style={{ margin: '8px 0 4px 0', fontSize: '12px', color: 'var(--text-secondary)' }}>Gestion Équipe / Turnover</h5>
                                 {users.filter(u => u.role === 'WAITRESS' && u.status === 'VALIDATED').map(u => (
-                                  <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', padding: '6px 8px', borderRadius: '6px', border: '1px dashed rgba(255,255,255,0.03)', opacity: u.is_active ? 1 : 0.6 }}>
+                                  <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', padding: '6px 8px', borderRadius: '6px', border: '1px dashed #E2E8F0', opacity: u.is_active ? 1 : 0.6 }}>
                                     <div>
                                       <div style={{ fontWeight: 'bold', fontSize: '11px', textDecoration: u.is_active ? 'none' : 'line-through' }}>{u.name}</div>
                                       <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Tél : {u.phone}</div>
@@ -2605,211 +2627,266 @@ export default function App() {
 
                             {/* Tab CONTENT: Drinks Catalogue management */}
                             {gerantTab === 'catalogue' && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', maxHeight: '280px' }}>
-                                <div style={{ background: '#1e293b', padding: '14px', borderRadius: '16px', border: '1px solid #334155' }}>
-                                  <h5 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 800, color: '#f97316', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Beer size={15} /> Nouvel Article au Catalogue
-                                  </h5>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {/* Header catalogue avec bouton d'ajout */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                  <div>
+                                    <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <Beer size={16} style={{ color: '#F97316' }} />
+                                      <span>Articles en rayon ({products.filter(p => p.is_active !== false).length})</span>
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>Gestion des stocks et boissons du maquis</div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowAddProductForm(!showAddProductForm)}
+                                      className="btn btn-primary"
+                                      style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, borderRadius: '8px' }}
+                                    >
+                                      {showAddProductForm ? '✕ Fermer' : '➕ Nouveau'}
+                                    </button>
+                                  </div>
+                                </div>
 
-                                  <form onSubmit={handleAddProduct} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {/* 1. Sélection de la catégorie */}
-                                    <div>
-                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Catégorie de l'article</label>
-                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
-                                        {[
-                                          { key: 'BEER', icon: '🍺', label: 'Bière' },
-                                          { key: 'SODA', icon: '🥤', label: 'Soda' },
-                                          { key: 'WINE_LIQUOR', icon: '🍷', label: 'Vin' },
-                                          { key: 'DISH', icon: '🍲', label: 'Plat' },
-                                          { key: 'WATER', icon: '💧', label: 'Eau' }
-                                        ].map(cat => (
+                                {/* Formulaire d'ajout (repliable ou direct) */}
+                                {showAddProductForm && (
+                                  <div style={{ background: '#FFFFFF', padding: '14px', borderRadius: '12px', border: '2px solid #F97316', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.08)' }}>
+                                    <h5 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <span>➕ Ajouter un nouvel article</span>
+                                    </h5>
+
+                                    <form onSubmit={(e) => { handleAddProduct(e); setShowAddProductForm(false); }} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                      {/* Catégories */}
+                                      <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Catégorie</label>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
+                                          {[
+                                            { key: 'BEER', icon: '🍺', label: 'Bière' },
+                                            { key: 'SODA', icon: '🥤', label: 'Soda' },
+                                            { key: 'WINE_LIQUOR', icon: '🍷', label: 'Vin' },
+                                            { key: 'DISH', icon: '🍲', label: 'Plat' },
+                                            { key: 'WATER', icon: '💧', label: 'Eau' }
+                                          ].map(cat => (
+                                            <button
+                                              key={cat.key}
+                                              type="button"
+                                              onClick={() => setNewProductCategory(cat.key)}
+                                              style={{
+                                                padding: '6px 2px',
+                                                borderRadius: '8px',
+                                                border: newProductCategory === cat.key ? '2px solid #F97316' : '1px solid #CBD5E1',
+                                                background: newProductCategory === cat.key ? '#FFF7ED' : '#FFFFFF',
+                                                color: newProductCategory === cat.key ? '#EA580C' : '#0F172A',
+                                                fontSize: '10px',
+                                                fontWeight: 800,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '2px',
+                                                cursor: 'pointer'
+                                              }}
+                                            >
+                                              <span>{cat.icon}</span>
+                                              <span>{cat.label}</span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* Photo */}
+                                      <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Photo de l'article</label>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          capture="environment"
+                                          id="manager-photo-upload"
+                                          onChange={handlePhotoSelected}
+                                          style={{ display: 'none' }}
+                                        />
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                           <button
-                                            key={cat.key}
                                             type="button"
-                                            onClick={() => setNewProductCategory(cat.key)}
+                                            onClick={() => document.getElementById('manager-photo-upload')?.click()}
                                             style={{
-                                              padding: '6px 2px',
+                                              flex: 1,
+                                              padding: '8px',
                                               borderRadius: '8px',
-                                              border: newProductCategory === cat.key ? '2px solid #f97316' : '1px solid #475569',
-                                              background: newProductCategory === cat.key ? 'rgba(249, 115, 22, 0.25)' : '#0f172a',
-                                              color: '#ffffff',
-                                              fontSize: '10px',
-                                              fontWeight: 800,
+                                              border: '2px dashed #CBD5E1',
+                                              background: '#F8FAFC',
+                                              color: '#0F172A',
+                                              fontSize: '11px',
+                                              fontWeight: 700,
                                               display: 'flex',
-                                              flexDirection: 'column',
                                               alignItems: 'center',
-                                              gap: '2px',
+                                              justifyContent: 'center',
+                                              gap: '6px',
                                               cursor: 'pointer'
                                             }}
                                           >
-                                            <span>{cat.icon}</span>
-                                            <span>{cat.label}</span>
+                                            <span>📷</span>
+                                            <span>{newProductPhotoFile ? 'Photo sélectionnée' : 'Prendre photo / Galerie'}</span>
                                           </button>
-                                        ))}
+
+                                          {newProductPhotoPreview && (
+                                            <div style={{ position: 'relative', width: '38px', height: '38px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #10B981', flexShrink: 0 }}>
+                                              <img src={newProductPhotoPreview} alt="Aperçu" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
 
-                                    {/* 2. Prise de vue / Sélection photo directe */}
-                                    <div>
-                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Photo de l'article</label>
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        capture="environment"
-                                        id="manager-photo-upload"
-                                        onChange={handlePhotoSelected}
-                                        style={{ display: 'none' }}
-                                      />
-                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                        <button
-                                          type="button"
-                                          onClick={() => document.getElementById('manager-photo-upload')?.click()}
-                                          style={{
-                                            flex: 1,
-                                            padding: '10px',
-                                            borderRadius: '10px',
-                                            border: '2px dashed #475569',
-                                            background: '#0f172a',
-                                            color: '#cbd5e1',
-                                            fontSize: '11px',
-                                            fontWeight: 700,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '6px',
-                                            cursor: 'pointer'
-                                          }}
-                                        >
-                                          <span>📷</span>
-                                          <span>{newProductPhotoFile ? 'Changer la photo' : 'Prendre photo / Galerie'}</span>
-                                        </button>
-
-                                        {newProductPhotoPreview && (
-                                          <div style={{ position: 'relative', width: '42px', height: '42px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #10b981', flexShrink: 0 }}>
-                                            <img src={newProductPhotoPreview} alt="Aperçu" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            <button
-                                              type="button"
-                                              onClick={() => { setNewProductPhotoFile(null); setNewProductPhotoPreview(null); }}
-                                              style={{ position: 'absolute', top: 0, right: 0, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '0 0 0 4px', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                            >
-                                              ✕
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {/* 3. Nom de l'article */}
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Nom de l'article</label>
-                                      <input 
-                                        type="text" 
-                                        placeholder="ex: Beaufort, Poulet braisé, Coca..." 
-                                        className="input-field" 
-                                        style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
-                                        value={newProductName}
-                                        onChange={(e) => setNewProductName(e.target.value)}
-                                        required
-                                      />
-                                    </div>
-
-                                    {/* 4. Prix & Volume */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                      <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Prix (FCFA)</label>
+                                      {/* Nom */}
+                                      <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Nom de l'article</label>
                                         <input 
-                                          type="number" 
-                                          placeholder="1000" 
-                                          className="input-field" 
-                                          style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
-                                          value={newProductPrice}
-                                          onChange={(e) => setNewProductPrice(e.target.value)}
+                                          type="text" 
+                                          placeholder="ex: Brakina, Sobebra, Poulet..." 
+                                          style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', color: '#0F172A', fontWeight: 600, boxSizing: 'border-box' }}
+                                          value={newProductName}
+                                          onChange={(e) => setNewProductName(e.target.value)}
                                           required
                                         />
                                       </div>
-                                      <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Volume / Format</label>
-                                        <select 
-                                          className="input-field" 
-                                          style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
-                                          value={newProductVolume}
-                                          onChange={(e) => setNewProductVolume(e.target.value)}
-                                        >
-                                          <option value="33cl">33cl</option>
-                                          <option value="65cl">65cl</option>
-                                          <option value="1.5L">1.5L</option>
-                                          <option value="Portion">Portion / Plat</option>
-                                          <option value="Verre">Verre / Dose</option>
-                                        </select>
-                                      </div>
-                                    </div>
 
-                                    {/* 5. Stock Initial */}
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                      <label className="input-label" style={{ fontSize: '10px', color: '#94a3b8' }}>Stock Initial (unités)</label>
-                                      <input 
-                                        type="number" 
-                                        placeholder="50" 
-                                        className="input-field" 
-                                        style={{ padding: '8px 10px', fontSize: '12px', background: '#0f172a', border: '1px solid #475569', color: '#ffffff' }}
-                                        value={newProductStock}
-                                        onChange={(e) => setNewProductStock(e.target.value)}
-                                        required
-                                      />
-                                    </div>
-
-                                    <button
-                                      type="submit"
-                                      disabled={isUploadingProduct}
-                                      className="btn btn-primary"
-                                      style={{ width: '100%', padding: '10px', fontSize: '12px', fontWeight: 800, marginTop: '4px' }}
-                                    >
-                                      {isUploadingProduct ? '⏳ Enregistrement & Upload...' : '✓ Ajouter et Synchroniser'}
-                                    </button>
-                                  </form>
-                                </div>
-
-                                {/* Liste récapitulative des articles du catalogue */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>
-                                    Articles en rayon ({products.filter(p => p.is_active).length})
-                                  </div>
-                                  {products.filter(p => p.is_active).map(prod => (
-                                    <div key={prod.id} style={{
-                                      background: '#1e293b',
-                                      border: '1px solid #334155',
-                                      borderRadius: '10px',
-                                      padding: '8px 10px',
-                                      display: 'flex',
-                                      justifyContent: 'space-between',
-                                      alignItems: 'center'
-                                    }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                          {prod.image_url || prod.image_base64 ? (
-                                            <img src={prod.image_url || prod.image_base64} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                          ) : (
-                                            <Beer size={14} style={{ color: '#f59e0b' }} />
-                                          )}
+                                      {/* Prix & Volume */}
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        <div>
+                                          <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Prix (F CFA)</label>
+                                          <input 
+                                            type="number" 
+                                            placeholder="1000" 
+                                            style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', color: '#0F172A', fontWeight: 600, boxSizing: 'border-box' }}
+                                            value={newProductPrice}
+                                            onChange={(e) => setNewProductPrice(e.target.value)}
+                                            required
+                                          />
                                         </div>
                                         <div>
-                                          <div style={{ fontWeight: 800, fontSize: '12px', color: '#ffffff' }}>{prod.name}</div>
-                                          <div style={{ fontSize: '10px', color: '#94a3b8' }}>{prod.price} F CFA ({prod.volume})</div>
+                                          <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Volume</label>
+                                          <select 
+                                            style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', color: '#0F172A', fontWeight: 600, boxSizing: 'border-box' }}
+                                            value={newProductVolume}
+                                            onChange={(e) => setNewProductVolume(e.target.value)}
+                                          >
+                                            <option value="33cl">33cl</option>
+                                            <option value="50cl">50cl</option>
+                                            <option value="65cl">65cl</option>
+                                            <option value="1L">1L</option>
+                                            <option value="1.5L">1.5L</option>
+                                            <option value="Portion">Portion / Plat</option>
+                                            <option value="Verre">Verre / Dose</option>
+                                          </select>
                                         </div>
                                       </div>
 
-                                      <div style={{
-                                        fontSize: '11px',
-                                        fontWeight: 800,
-                                        padding: '2px 8px',
-                                        borderRadius: '6px',
-                                        background: prod.current_stock < 10 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                                        color: prod.current_stock < 10 ? '#ef4444' : '#10b981'
-                                      }}>
-                                        {prod.current_stock} restants
+                                      {/* Stock initial */}
+                                      <div>
+                                        <label style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Stock Initial (unités)</label>
+                                        <input 
+                                          type="number" 
+                                          placeholder="50" 
+                                          style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', color: '#0F172A', fontWeight: 600, boxSizing: 'border-box' }}
+                                          value={newProductStock}
+                                          onChange={(e) => setNewProductStock(e.target.value)}
+                                          required
+                                        />
                                       </div>
+
+                                      <button
+                                        type="submit"
+                                        disabled={isUploadingProduct}
+                                        className="btn btn-primary"
+                                        style={{ width: '100%', padding: '10px', fontSize: '12px', fontWeight: 800, borderRadius: '8px' }}
+                                      >
+                                        {isUploadingProduct ? '⏳ Enregistrement...' : "✓ Enregistrer l'article"}
+                                      </button>
+                                    </form>
+                                  </div>
+                                )}
+
+                                {/* LISTE DES ARTICLES : Toujours affichée et bien visible */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
+                                  {products.filter(p => p.is_active !== false).length === 0 ? (
+                                    <div style={{ background: '#FFFFFF', border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '24px 16px', textAlign: 'center' }}>
+                                      <Beer size={32} style={{ color: '#94A3B8', margin: '0 auto 8px auto' }} />
+                                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>Le catalogue est actuellement vide</div>
+                                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', marginBottom: '14px' }}>
+                                        Vous pouvez ajouter vos propres boissons ou initialiser le catalogue avec 6 boissons populaires d'un clic.
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={handleRestoreSampleDrinks}
+                                        className="btn btn-primary"
+                                        style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 800, borderRadius: '8px' }}
+                                      >
+                                        ⚡ Charger les boissons d'exemple (Brakina, Beaufort, Sobebra...)
+                                      </button>
                                     </div>
-                                  ))}
+                                  ) : (
+                                    products.filter(p => p.is_active !== false).map(prod => (
+                                      <div key={prod.id} style={{
+                                        background: '#FFFFFF',
+                                        border: '1px solid #E2E8F0',
+                                        borderRadius: '10px',
+                                        padding: '10px 12px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                                      }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                          <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                            {prod.image_url || prod.image_base64 ? (
+                                              <img src={prod.image_url || prod.image_base64} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                            ) : (
+                                              <Beer size={18} style={{ color: '#F97316' }} />
+                                            )}
+                                          </div>
+                                          <div>
+                                            <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>{prod.name}</div>
+                                            <div style={{ fontSize: '11px', color: '#EA580C', fontWeight: 700 }}>
+                                              {prod.price?.toLocaleString()} F CFA <span style={{ color: '#64748B', fontWeight: 500 }}>• {prod.volume}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{
+                                            fontSize: '11px',
+                                            fontWeight: 800,
+                                            padding: '4px 8px',
+                                            borderRadius: '6px',
+                                            background: prod.current_stock < 10 ? '#FEE2E2' : '#D1FAE5',
+                                            color: prod.current_stock < 10 ? '#DC2626' : '#059669',
+                                            border: prod.current_stock < 10 ? '1px solid #FECACA' : '1px solid #A7F3D0'
+                                          }}>
+                                            {prod.current_stock} en stock
+                                          </div>
+                                          <button
+                                            type="button"
+                                            title="Supprimer l'article"
+                                            onClick={() => handleDeleteProduct(prod.id)}
+                                            style={{
+                                              background: '#FEE2E2',
+                                              border: '1px solid #FECACA',
+                                              borderRadius: '6px',
+                                              width: '28px',
+                                              height: '28px',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              color: '#DC2626',
+                                              cursor: 'pointer'
+                                            }}
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -2823,7 +2900,7 @@ export default function App() {
                                   {users.filter(u => u.role === 'WAITRESS' && u.is_active && u.status === 'VALIDATED').map(w => {
                                     const activeShift = attendances.find(a => a.waitress_name === w.name && a.check_out === null);
                                     return (
-                                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                                         <div>
                                           <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{w.name}</span>
                                           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Tél : {w.phone}</div>
@@ -2851,7 +2928,7 @@ export default function App() {
 
                                 <h5 style={{ margin: '10px 0 4px 0', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Historique du jour</h5>
                                 {attendances.map(a => (
-                                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', borderBottom: '1px solid rgba(255,255,255,0.03)', padding: '4px 0' }}>
+                                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', borderBottom: '1px solid #E2E8F0', padding: '4px 0' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                       <span>{a.waitress_name}</span>
                                       {a.accuracy && (
@@ -2879,7 +2956,7 @@ export default function App() {
 
                                 <div style={{ overflowY: 'auto', maxHeight: '140px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                   {products.map(p => (
-                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
                                       <div>
                                         <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{p.name} {p.volume}</span>
                                         <div style={{ fontSize: '10px', color: p.current_stock < 10 ? 'var(--danger)' : 'var(--text-secondary)' }}>
@@ -2899,7 +2976,7 @@ export default function App() {
 
                                 {/* Stock adjustments inline popup */}
                                 {adjustingProductId && (
-                                  <form onSubmit={handleAdjustStockSubmit} style={{ background: '#12121a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px' }}>
+                                  <form onSubmit={handleAdjustStockSubmit} style={{ background: '#12121a', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px' }}>
                                     <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '6px' }}>
                                       Ajuster : {products.find(p => p.id === adjustingProductId)?.name}
                                     </div>
@@ -3028,8 +3105,8 @@ export default function App() {
                                               display: 'flex', 
                                               alignItems: 'center', 
                                               gap: '10px',
-                                              background: 'rgba(255,255,255,0.01)', 
-                                              border: '1px solid rgba(255,255,255,0.03)',
+                                              background: '#FFFFFF', 
+                                              border: '1px solid #E2E8F0',
                                               borderRadius: '8px',
                                               padding: '6px 10px'
                                             }}
@@ -3050,7 +3127,7 @@ export default function App() {
                                                 <>
                                                   <button 
                                                     onClick={() => handleRemoveFromCart(p.id)} 
-                                                    style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
+                                                    style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#E2E8F0', border: '1px solid var(--border-color)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
                                                   >
                                                     -
                                                   </button>
@@ -3060,7 +3137,7 @@ export default function App() {
                                               <button 
                                                 onClick={() => handleAddToCart(p.id)} 
                                                 disabled={p.current_stock <= 0}
-                                                style={{ width: '22px', height: '22px', borderRadius: '50%', background: p.current_stock <= 0 ? 'rgba(255,255,255,0.02)' : 'var(--primary)', border: 'none', color: '#0d0d12', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
+                                                style={{ width: '22px', height: '22px', borderRadius: '50%', background: p.current_stock <= 0 ? '#F8FAFC' : 'var(--primary)', border: 'none', color: '#0d0d12', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}
                                               >
                                                 +
                                               </button>
@@ -3096,8 +3173,8 @@ export default function App() {
                                     </div>
 
                                     {/* Brief cart contents review */}
-                                    <div style={{ flex: 1, background: '#1e293b', borderRadius: '8px', padding: '10px', marginBottom: '10px', overflowY: 'auto', maxHeight: '110px' }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px', marginBottom: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                                    <div style={{ flex: 1, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px', marginBottom: '10px', overflowY: 'auto', maxHeight: '110px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px', marginBottom: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>
                                         <span>DÉTAIL COMMANDE</span>
                                         <span>TOTAL</span>
                                       </div>
@@ -3111,7 +3188,7 @@ export default function App() {
                                           </div>
                                         );
                                       })}
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '6px', fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary)' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '6px', fontWeight: 'bold', fontSize: '12px', color: 'var(--text-primary)' }}>
                                         <span>Total Facturé :</span>
                                         <span style={{ color: 'var(--primary)' }}>{cartTotal} CFA</span>
                                       </div>
@@ -3218,7 +3295,7 @@ export default function App() {
                                     Historique de vos shifts
                                   </div>
                                   {attendances.filter(a => a.waitress_name === currentUser.name).map((a, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: 'var(--text-secondary)', padding: '3px 0', borderBottom: '1px solid #E2E8F0' }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <span>Arrivée: {a.check_in}</span>
                                         {a.accuracy && (
@@ -3236,7 +3313,7 @@ export default function App() {
 
                             {waitressTab === 'profil' && (
                               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
-                                <div className="glass-card" style={{ padding: '14px', background: 'rgba(255,255,255,0.01)', textAlign: 'left' }}>
+                                <div className="glass-card" style={{ padding: '14px', background: '#FFFFFF', textAlign: 'left' }}>
                                   <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Nom</div>
                                   <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '6px' }}>{currentUser.name}</div>
                                   
@@ -3314,7 +3391,7 @@ export default function App() {
                             Votre compte ({currentUser.phone}) est enregistré en tant que <strong>{currentUser.role === 'MANAGER' ? 'Gérant' : 'Serveuse'}</strong>.
                           </p>
 
-                          <div className="glass-card" style={{ padding: '12px', borderRadius: '10px', fontSize: '11px', background: 'rgba(255,255,255,0.02)', borderColor: currentUser.role === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)', textAlign: 'left', marginBottom: '16px' }}>
+                          <div className="glass-card" style={{ padding: '12px', borderRadius: '10px', fontSize: '11px', background: '#F8FAFC', borderColor: currentUser.role === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)', textAlign: 'left', marginBottom: '16px' }}>
                             <div style={{ fontWeight: 700, color: currentUser.role === 'MANAGER' ? 'var(--secondary)' : 'var(--primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                               {currentUser.role === 'MANAGER' ? '👑 Validation par le Propriétaire' : '💼 Validation par le Gérant'}
                             </div>
@@ -3393,11 +3470,11 @@ export default function App() {
                           Pour toute question commerciale ou assistance technique sur MaquisSync, contactez notre équipe :
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
+                          <div style={{ background: '#F8FAFC', padding: '8px', borderRadius: '6px', border: '1px solid #E2E8F0', textAlign: 'left' }}>
                             <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Service Commercial</div>
                             <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>+226 65 61 34 72</div>
                           </div>
-                          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
+                          <div style={{ background: '#F8FAFC', padding: '8px', borderRadius: '6px', border: '1px solid #E2E8F0', textAlign: 'left' }}>
                             <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>Support Technique</div>
                             <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>+226 70 33 32 69</div>
                           </div>
